@@ -206,7 +206,7 @@ pub fn process(config: ConfigSchema) {
         if xp_cost > max_xp_cost {
             max_xp_cost = xp_cost
         }
-        println!("{}. [{}: {} {}] + [{}: {} {}] = {} ({}xp)", i + 1, get_name(&names, left.name_mask), left.value, left.extra_cost,
+        println!("{}. [{}: {}+{}] + [{}: {}+{}] = {} ({}xp)", i + 1, get_name(&names, left.name_mask), left.value, left.extra_cost,
                  get_name(&names, right.name_mask), right.value, right.extra_cost,
                  level_cost, xp_cost);
     }
