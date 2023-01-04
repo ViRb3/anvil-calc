@@ -7,8 +7,13 @@ use serde::{Deserialize, Serialize};
 use tinyvec::{tiny_vec, TinyVec};
 use std::mem;
 
-const PIECE_TYPE_BOOK: MA = 0;
-const PIECE_TYPE_ITEM: MA = 1;
+#[derive(Default, Clone)]
+#[repr(u8)]
+enum PieceType {
+    #[default]
+    Item,
+    Book,
+}
 
 const MS: usize = mem::size_of::<MB>() * 8;
 
@@ -22,7 +27,7 @@ struct Piece {
     value: MA,
     work_count: MA,
     extra_cost: MA,
-    ptype: MA,
+    ptype: PieceType,
 }
 
 #[derive(Default, Clone)]
@@ -57,11 +62,11 @@ fn calc_penalty(work_count: MC) -> MC {
 }
 
 fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
-    let new_type = match (left.ptype, right.ptype) {
-        (PIECE_TYPE_BOOK, PIECE_TYPE_BOOK) => PIECE_TYPE_BOOK,
-        _ => PIECE_TYPE_ITEM,
+    let new_type = match (&left.ptype, &right.ptype) {
+        (PieceType::Book, PieceType::Book) => PieceType::Book,
+        _ => PieceType::Item,
     };
-    if books_free && new_type == PIECE_TYPE_BOOK {
+    if books_free && matches!(new_type, PieceType::Book) {
         return (Piece {
             name_mask: left.name_mask | right.name_mask,
             value: left.value + right.value,
@@ -87,7 +92,7 @@ fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue
     for order in permutations.get(&queue.len()).expect("need to precompute more permuations") {
         let left = &queue[order[0]];
         let right = &queue[order[1]];
-        if right.ptype == PIECE_TYPE_ITEM {
+        if matches!(right.ptype, PieceType::Item) {
             continue;
         }
         let (combined, cost) = anvil(books_free, left, right);
@@ -171,9 +176,9 @@ pub fn process(config: ConfigSchema) {
     let mut pieces = Vec::new();
     let mut names = Vec::new();
     let item_iter = config.input.items.iter()
-        .map(|item| (item, PIECE_TYPE_ITEM));
+        .map(|item| (item, PieceType::Item));
     let book_iter = config.input.books.iter()
-        .map(|item| (item, PIECE_TYPE_BOOK));
+        .map(|item| (item, PieceType::Book));
     for (i, (piece, ptype)) in item_iter.chain(book_iter).enumerate() {
         let (name, value, work_count, extra_cost) = piece.clone();
         names.push(name);
