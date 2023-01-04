@@ -1,7 +1,6 @@
 extern crate core;
 
 use std::cmp;
-use std::collections::HashMap;
 use itertools::{Itertools};
 use serde::{Deserialize, Serialize};
 use tinyvec::{tiny_vec, TinyVec};
@@ -86,11 +85,16 @@ fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
     }, cost)
 }
 
-fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Box<[TraceRecord]>) {
+fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Box<[TraceRecord]>) {
     let mut best_trace: Option<Box<[TraceRecord]>> = None;
-    for order in permutations.get(&queue.len()).expect("need to precompute more permuations") {
-        let left = &queue[order[0]];
-        let right = &queue[order[1]];
+    let lefts = 0..queue.len();
+    let pairs = lefts.flat_map(|l| {
+        let rights = 0..queue.len();
+        rights.filter(move |&r| r != l).map(move |r| (l, r))
+    });
+    for (o1, o2) in pairs {
+        let left = &queue[o1];
+        let right = &queue[o2];
         if matches!(right.ptype, PieceType::Item) {
             continue;
         }
@@ -98,16 +102,16 @@ fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue
         if total_cost + cost > best_cost {
             continue;
         }
-        let new_queue: TinyVec<[Piece; MS]> = (if order[0] < order[1] {
-            queue[..order[0]].iter()
-                .chain(queue[order[0] + 1..order[1]].iter())
-                .chain(queue[order[1] + 1..].iter())
+        let new_queue: TinyVec<[Piece; MS]> = (if o1 < o2 {
+            queue[..o1].iter()
+                .chain(queue[o1 + 1..o2].iter())
+                .chain(queue[o2 + 1..].iter())
                 .cloned()
                 .chain(std::iter::once(combined))
         } else {
-            queue[..order[1]].iter()
-                .chain(queue[order[1] + 1..order[0]].iter())
-                .chain(queue[order[0] + 1..].iter())
+            queue[..o2].iter()
+                .chain(queue[o2 + 1..o1].iter())
+                .chain(queue[o1 + 1..].iter())
                 .cloned()
                 .chain(std::iter::once(combined))
         }).collect();
@@ -119,7 +123,7 @@ fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue
                     right: right.clone(),
                     cost,
                 })).collect();
-            let (result_cost, result_trace) = solve(permutations, books_free, &new_queue, total_cost + cost, best_cost, &new_trace);
+            let (result_cost, result_trace) = solve(books_free, &new_queue, total_cost + cost, best_cost, &new_trace);
             if best_trace.is_none() || result_cost < best_cost {
                 best_trace = Some(result_trace);
                 best_cost = result_cost;
@@ -138,7 +142,7 @@ fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue
             }
         }
     }
-    (best_cost, best_trace.unwrap_or(Box::from(Vec::new())))
+    (best_cost, best_trace.unwrap_or_else(|| Box::from(Vec::new())))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -185,15 +189,10 @@ pub fn process(config: ConfigSchema) {
             ptype,
         });
     }
-    let mut permutations = HashMap::new();
-    for ceil in 2..=MS {
-        permutations.insert(ceil, (0..ceil).permutations(2)
-            .map(|v| v.iter().copied().collect_vec())
-            .collect_vec());
-    }
+    
     println!("Calculating...");
     let trace = tiny_vec!([TraceRecord; 0]);
-    let (best_cost, best_order) = solve(&permutations, config.config.books_free, &pieces, 0, 4_294_967_295, &trace);
+    let (best_cost, best_order) = solve(config.config.books_free, &pieces, 0, 4_294_967_295, &trace);
     println!("Done");
     let mut total_level_cost = 0;
     let mut max_xp_cost = 0;

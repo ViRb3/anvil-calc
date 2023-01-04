@@ -9,8 +9,9 @@ mod calc;
 
 fn main() {
     println!("Preparing...");
+    let start = std::time::Instant::now();
     let file = File::open("config.yml").expect("unable to open config.yml");
     let config: ConfigSchema = serde_yaml::from_reader(file).expect("unable to read config.yml");
     process(config);
-    println!("Done");
+    println!("Done in {}ms", start.elapsed().as_millis());
 }
