@@ -86,9 +86,8 @@ fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
     }, cost)
 }
 
-fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue: &[Piece], total_cost: MC, trace: &[TraceRecord]) -> (MC, Box<[TraceRecord]>) {
+fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Box<[TraceRecord]>) {
     let mut best_trace: Option<Box<[TraceRecord]>> = None;
-    let mut best_cost = 4_294_967_295;
     for order in permutations.get(&queue.len()).expect("need to precompute more permuations") {
         let left = &queue[order[0]];
         let right = &queue[order[1]];
@@ -120,7 +119,7 @@ fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue
                     right: right.clone(),
                     cost,
                 })).collect();
-            let (result_cost, result_trace) = solve(permutations, books_free, &new_queue, total_cost + cost, &new_trace);
+            let (result_cost, result_trace) = solve(permutations, books_free, &new_queue, total_cost + cost, best_cost, &new_trace);
             if best_trace.is_none() || result_cost < best_cost {
                 best_trace = Some(result_trace);
                 best_cost = result_cost;
@@ -139,7 +138,7 @@ fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue
             }
         }
     }
-    (best_cost, best_trace.unwrap_or_else(|| panic!("trace is null")))
+    (best_cost, best_trace.unwrap_or(Box::from(Vec::new())))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -194,7 +193,7 @@ pub fn process(config: ConfigSchema) {
     }
     println!("Calculating...");
     let trace = tiny_vec!([TraceRecord; 0]);
-    let (best_cost, best_order) = solve(&permutations, config.config.books_free, &pieces, 0, &trace);
+    let (best_cost, best_order) = solve(&permutations, config.config.books_free, &pieces, 0, 4_294_967_295, &trace);
     println!("Done");
     let mut total_level_cost = 0;
     let mut max_xp_cost = 0;
