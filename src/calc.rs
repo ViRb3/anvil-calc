@@ -52,12 +52,12 @@ fn calc_level(xp: MC) -> MC {
     let mut level = 0;
     while test_xp < xp {
         level += 1;
-        test_xp = calc_xp(level)
+        test_xp = calc_xp(level);
     }
     level
 }
 
-fn calc_penalty(work_count: MC) -> MC {
+const fn calc_penalty(work_count: MC) -> MC {
     (1 << work_count) - 1
 }
 
@@ -86,7 +86,13 @@ fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
     }, cost)
 }
 
-fn solve(permutations: &HashMap<usize, Vec<Vec<usize>>>, books_free: bool, queue: &[Piece], total_cost: MC, trace: &[TraceRecord]) -> (MC, Box<[TraceRecord]>) {
+fn solve(
+    permutations: &HashMap<usize, Vec<Vec<usize>>>, 
+    books_free: bool, 
+    queue: &[Piece], 
+    total_cost: MC, 
+    trace: &[TraceRecord]
+) -> (MC, Box<[TraceRecord]>) {
     let mut best_trace: Option<Box<[TraceRecord]>> = None;
     let mut best_cost = 4_294_967_295;
     for order in permutations.get(&queue.len()).expect("need to precompute more permuations") {
@@ -184,7 +190,7 @@ pub fn process(config: ConfigSchema) {
             work_count,
             extra_cost,
             ptype,
-        })
+        });
     }
     let mut permutations = HashMap::new();
     for ceil in 2..=MS {
@@ -205,7 +211,7 @@ pub fn process(config: ConfigSchema) {
         let level_cost = calc_level(xp_cost);
         total_level_cost += level_cost;
         if xp_cost > max_xp_cost {
-            max_xp_cost = xp_cost
+            max_xp_cost = xp_cost;
         }
         println!("{}. [{}: {} {}] + [{}: {} {}] = {} ({}xp)", i + 1, get_name(&names, left.name_mask), left.value, left.extra_cost,
                  get_name(&names, right.name_mask), right.value, right.extra_cost,
