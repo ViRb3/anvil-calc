@@ -1,10 +1,13 @@
 extern crate core;
 
 use std::cmp;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use itertools::{Itertools};
 use serde::{Deserialize, Serialize};
 use tinyvec::{tiny_vec, TinyVec};
 use std::mem;
+use lfu_cache::LfuCache;
 
 const PIECE_TYPE_BOOK: MB = 0;
 const PIECE_TYPE_ITEM: MB = 1;
@@ -15,14 +18,14 @@ type MA = u8;
 type MB = u16;
 type MC = u32;
 
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone, Hash)]
 struct Piece {
     name_mask: MB,
     value: MA,
     work_count: MA,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone, Hash)]
 struct TraceRecord {
     left: Piece,
     right: Piece,
@@ -70,7 +73,26 @@ fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
     }, cost)
 }
 
-fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Box<[TraceRecord]>) {
+fn solve(books_free: bool, cache: &mut LfuCache<u64, Option<Box<[TraceRecord]>>>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
+    let mut hasher = DefaultHasher::new();
+    queue.hash(&mut hasher);
+    let queue_hash = hasher.finish();
+    match cache.get(&queue_hash) {
+        Some(cached_trace) => {
+            return match cached_trace {
+                Some(cached_trace) => {
+                    best_cost = 0;
+                    for record in trace.iter().chain(cached_trace.iter()) {
+                        let (_, cost) = anvil(books_free, &record.left, &record.right);
+                        best_cost += cost
+                    }
+                    (best_cost, Some(trace.iter().chain(cached_trace.iter()).cloned().collect()))
+                }
+                _ => (best_cost, None)
+            };
+        }
+        _ => {}
+    };
     let mut best_trace: Option<Box<[TraceRecord]>> = None;
     let lefts = 0..queue.len();
     let pairs = lefts.flat_map(|l| {
@@ -81,13 +103,13 @@ fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, t
         let left = &queue[o1];
         let right = &queue[o2];
         if left.name_mask & 1 == PIECE_TYPE_BOOK && right.name_mask & 1 == PIECE_TYPE_ITEM {
-            continue
+            continue;
         }
         let (combined, cost) = anvil(books_free, left, right);
         if total_cost + cost > best_cost {
             continue;
         }
-        let new_queue: TinyVec<[Piece; MS]> = (if o1 < o2 {
+        let new_queue = (if o1 < o2 {
             queue[..o1].iter()
                 .chain(queue[o1 + 1..o2].iter())
                 .chain(queue[o2 + 1..].iter())
@@ -99,17 +121,17 @@ fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, t
                 .chain(queue[o1 + 1..].iter())
                 .cloned()
                 .chain(std::iter::once(combined))
-        }).collect();
+        }).collect::<TinyVec<[Piece; MS]>>();
         if new_queue.len() > 1 {
-            let new_trace: TinyVec<[TraceRecord; MS]> = trace.iter()
+            let new_trace = trace.iter()
                 .cloned()
                 .chain(std::iter::once(TraceRecord {
                     left: left.clone(),
                     right: right.clone(),
-                })).collect();
-            let (result_cost, result_trace) = solve(books_free, &new_queue, total_cost + cost, best_cost, &new_trace);
+                })).collect::<TinyVec<[TraceRecord; MS]>>();
+            let (result_cost, result_trace) = solve(books_free, cache, &new_queue, total_cost + cost, best_cost, &new_trace);
             if best_trace.is_none() || result_cost < best_cost {
-                best_trace = Some(result_trace);
+                best_trace = result_trace;
                 best_cost = result_cost;
             }
         } else {
@@ -125,7 +147,12 @@ fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, t
             }
         }
     }
-    (best_cost, best_trace.unwrap_or_else(|| Box::from(Vec::new())))
+    // caching small queues is slower than calculating, also wastes memory
+    if queue.len() > 3 {
+        cache.insert(queue_hash, best_trace.as_ref()
+            .map(|x| x[trace.len()..].iter().cloned().collect()));
+    }
+    return (best_cost, best_trace);
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -173,13 +200,21 @@ pub fn process(config: ConfigSchema) -> String {
     }
 
     let trace = tiny_vec!([TraceRecord; 0]);
-    let (best_cost, best_order) = solve(config.config.books_free, &pieces, 0, 4_294_967_295, &trace);
+    let mut cache: LfuCache<u64, Option<Box<[TraceRecord]>>> = LfuCache::with_capacity(match pieces.len() {
+        8 => 20_000, // 2 MB
+        9 => 200_000, // 20 MB
+        10 => 3_000_000, // 300 MB
+        11 => 30_000_000, // 3 GB
+        _ => 1_000 // 100 kB
+    });
+    let (best_cost, best_order) = solve(config.config.books_free, &mut cache, &pieces, 0, 4_294_967_295, &trace);
+    let order = best_order.unwrap();
     let mut total_level_cost = 0;
     let mut max_xp_cost = 0;
     let mut result = String::new();
-    for i in 0..best_order.len() {
-        let left = &best_order[i].left;
-        let right = &best_order[i].right;
+    for i in 0..order.len() {
+        let left = &order[i].left;
+        let right = &order[i].right;
         let (_, xp_cost) = anvil(config.config.books_free, left, right);
         let level_cost = calc_level(xp_cost);
         total_level_cost += level_cost;

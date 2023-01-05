@@ -5,8 +5,9 @@ input:
   # [name, value (level*multiplier), work count]
   # https://minecraft.fandom.com/wiki/Anvil_mechanics#Costs_for_combining_enchantments
   items:
-    - ["boots 1", 0, 0]
-    - ["boots 2", 0, 0]
+    - ["boots 1", 1, 2]
+    - ["boots 2", 3, 4]
+    - ["boots 3", 5, 6]
   books:
     - ["soul speed", 12, 0]
     - ["thorns", 12, 0]
@@ -14,4 +15,4 @@ input:
     - ["depth strider", 6, 0]
     - ["protection", 4, 0]
     - ["unbreaking", 3, 0]
-    # - ["mending", 2, 0]
+#    - ["mending", 2, 0]
