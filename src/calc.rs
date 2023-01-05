@@ -195,8 +195,9 @@ pub fn process(config: ConfigSchema) -> String {
         if xp_cost > max_xp_cost {
             max_xp_cost = xp_cost;
         }
-        result += format!("{}. [{}: {}] + [{}: {}] = {} ({}xp)\n", i + 1, get_name(&names, left.name_mask), left.value,
-                          get_name(&names, right.name_mask), right.value, level_cost, xp_cost).as_str();
+        result += format!("{}. [{}: {},{}] + [{}: {},{}] = {} ({}xp)\n", i + 1, get_name(&names, left.name_mask), left.value, calc_penalty(MC::from(left.work_count)),
+                          get_name(&names, right.name_mask), right.value, calc_penalty(MC::from(right.work_count)),
+                          level_cost, xp_cost).as_str();
     }
     result += "\n";
     result += format!("Max step cost: {} ({max_xp_cost}xp)\n", calc_level(max_xp_cost)).as_str();
