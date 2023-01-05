@@ -95,9 +95,10 @@ fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, t
     for (o1, o2) in pairs {
         let left = &queue[o1];
         let right = &queue[o2];
-        if matches!(right.ptype, PieceType::Item) {
-            continue;
-        }
+        match (&left.ptype, &right.ptype) {
+            (PieceType::Book, PieceType::Item) => continue,
+            _ => {}
+        };
         let (combined, cost) = anvil(books_free, left, right);
         if total_cost + cost > best_cost {
             continue;
@@ -189,7 +190,7 @@ pub fn process(config: ConfigSchema) -> String {
             ptype,
         });
     }
-    
+
     let trace = tiny_vec!([TraceRecord; 0]);
     let (best_cost, best_order) = solve(config.config.books_free, &pieces, 0, 4_294_967_295, &trace);
     let mut total_level_cost = 0;
@@ -207,7 +208,6 @@ pub fn process(config: ConfigSchema) -> String {
         result += format!("{}. [{}: {}+{}] + [{}: {}+{}] = {} ({}xp)\n", i + 1, get_name(&names, left.name_mask), left.value, left.extra_cost,
                           get_name(&names, right.name_mask), right.value, right.extra_cost,
                           level_cost, xp_cost).as_str();
-
     }
     result += format!("Max step cost: {} ({max_xp_cost}xp)\n", calc_level(max_xp_cost)).as_str();
     result += format!("Final best cost: {} ({best_cost}xp)\n", calc_level(best_cost)).as_str();
