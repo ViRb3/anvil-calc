@@ -200,6 +200,10 @@ pub fn process(config: ConfigSchema) -> String {
         });
     }
 
+    if pieces.len() > 11 {
+        return String::from("Too many inputs, calculation not possible.\n");
+    }
+
     let trace = tiny_vec!([TraceRecord; 0]);
     let mut cache: LruCache<u64, Option<Box<[TraceRecord]>>> = LruCache::new(
         NonZeroUsize::new(match pieces.len() {
