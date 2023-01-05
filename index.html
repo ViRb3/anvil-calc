@@ -68,20 +68,21 @@
       `config:
   # Combining books is free when using Enchantment Library (Apotheosis)
   books_free: false
+  # If you can use the minimum required level on each step, enable this and the final cost will be much lower. Otherwise, leave this disabled or your final cost will be higher
+  optimize_xp: false
 input:
-  # [name, value (level*multiplier), work count]
+  # [name, level x multiplier, penalty]
   # https://minecraft.fandom.com/wiki/Anvil_mechanics#Costs_for_combining_enchantments
   items:
-    - ["boots 1", 0, 0]
-    - ["boots 2", 0, 0]
+    - ["boots", 0x0, 0]
   books:
-    - ["soul speed", 12, 0]
-    - ["thorns", 12, 0]
-    - ["feather falling", 4, 0]
-    - ["depth strider", 6, 0]
-    - ["protection", 4, 0]
-    - ["unbreaking", 3, 0]
-    # - ["mending", 2, 0]
+    - ["soul speed", 3x4, 0]
+    - ["thorns", 3x4, 0]
+    - ["feather falling", 4x1, 0]
+    - ["depth strider", 3x2, 0]
+    - ["protection", 4x1, 0]
+    - ["unbreaking", 3x1, 0]
+    - ["mending", 1x2, 0]
 `,
       1
     );
@@ -98,10 +99,22 @@ input:
       start.addEventListener("click", function () {
         spinner.style.display = "inline-block";
         start.style.display = "none";
+        editor2.setValue("Calculating...\n", 1);
         setTimeout(() => {
-          editor2.setValue(process_wasm(editor.getValue()), 1);
-          spinner.style.display = "none";
-          start.style.display = "inline-block";
+          try {
+            editor2.setValue(process_wasm(editor.getValue()), 1);
+            spinner.style.display = "none";
+            start.style.display = "inline-block";
+          } catch (err) {
+            editor2.setValue(
+              "Error occurred, was the input formatted correctly?\nCheck console logs for more information.\n",
+              1
+            );
+            init().then(() => {
+              spinner.style.display = "none";
+              start.style.display = "inline-block";
+            });
+          }
         }, 100);
       });
     });
