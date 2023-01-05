@@ -11,15 +11,15 @@ const PIECE_TYPE_ITEM: MB = 1;
 
 const MS: usize = mem::size_of::<MB>() * 8;
 
+type MA = u8;
 type MB = u16;
 type MC = u32;
 
 #[derive(Default, Clone)]
 struct Piece {
     name_mask: MB,
-    value: MB,
-    work_count: MB,
-    ptype: MB,
+    value: MA,
+    work_count: MA,
 }
 
 #[derive(Default, Clone)]
@@ -54,25 +54,20 @@ const fn calc_penalty(work_count: MC) -> MC {
 }
 
 fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
-    let new_type = match (left.ptype, right.ptype) {
-        (PIECE_TYPE_BOOK, PIECE_TYPE_BOOK) => PIECE_TYPE_BOOK,
-        _ => PIECE_TYPE_ITEM,
-    };
-    if books_free && new_type == PIECE_TYPE_BOOK {
+    let new_name_mask = left.name_mask | right.name_mask;
+    if books_free && new_name_mask & 1 == PIECE_TYPE_ITEM {
         return (Piece {
-            name_mask: left.name_mask | right.name_mask,
+            name_mask: new_name_mask,
             value: left.value + right.value,
             work_count: 0,
-            ptype: new_type,
         }, 0);
     }
     let cost = calc_xp(MC::from(right.value) + calc_penalty(MC::from(left.work_count)) +
         calc_penalty(MC::from(right.work_count)));
     (Piece {
-        name_mask: left.name_mask | right.name_mask,
+        name_mask: new_name_mask,
         value: left.value + right.value,
         work_count: cmp::max(left.work_count, right.work_count) + 1,
-        ptype: new_type,
     }, cost)
 }
 
@@ -86,10 +81,9 @@ fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, t
     for (o1, o2) in pairs {
         let left = &queue[o1];
         let right = &queue[o2];
-        match (left.ptype, right.ptype) {
-            (PIECE_TYPE_BOOK, PIECE_TYPE_ITEM) => continue,
-            _ => {}
-        };
+        if left.name_mask & 1 == PIECE_TYPE_BOOK && right.name_mask & 1 == PIECE_TYPE_ITEM {
+            continue
+        }
         let (combined, cost) = anvil(books_free, left, right);
         if total_cost + cost > best_cost {
             continue;
@@ -142,7 +136,7 @@ struct Config {
     books_free: bool,
 }
 
-type InputPiece = (String, MB, MB);
+type InputPiece = (String, MA, MA);
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Input {
@@ -174,10 +168,10 @@ pub fn process(config: ConfigSchema) -> String {
         let (name, value, work_count) = piece.clone();
         names.push(name);
         pieces.push(Piece {
-            name_mask: 1 << i,
+            // last bit carries piece type
+            name_mask: (1 << i) | ptype,
             value,
             work_count,
-            ptype,
         });
     }
 
