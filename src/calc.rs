@@ -58,7 +58,7 @@ const fn calc_penalty(work_count: MC) -> MC {
 
 fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
     let new_name_mask = left.name_mask | right.name_mask;
-    if books_free && new_name_mask & 1 == PIECE_TYPE_ITEM {
+    if books_free && new_name_mask & 1 == PIECE_TYPE_BOOK {
         return (Piece {
             name_mask: new_name_mask,
             value: left.value + right.value,
