@@ -171,7 +171,7 @@ fn get_name(names: &[String], name_mask: MB) -> String {
         .map(|(_, n)| n).join(" + ");
 }
 
-pub fn process(config: ConfigSchema) {
+pub fn process(config: ConfigSchema) -> String {
     let mut pieces = Vec::new();
     let mut names = Vec::new();
     let item_iter = config.input.items.iter()
@@ -190,12 +190,11 @@ pub fn process(config: ConfigSchema) {
         });
     }
     
-    println!("Calculating...");
     let trace = tiny_vec!([TraceRecord; 0]);
     let (best_cost, best_order) = solve(config.config.books_free, &pieces, 0, 4_294_967_295, &trace);
-    println!("Done");
     let mut total_level_cost = 0;
     let mut max_xp_cost = 0;
+    let mut result = String::new();
     for i in 0..best_order.len() {
         let left = &best_order[i].left;
         let right = &best_order[i].right;
@@ -205,11 +204,13 @@ pub fn process(config: ConfigSchema) {
         if xp_cost > max_xp_cost {
             max_xp_cost = xp_cost;
         }
-        println!("{}. [{}: {}+{}] + [{}: {}+{}] = {} ({}xp)", i + 1, get_name(&names, left.name_mask), left.value, left.extra_cost,
-                 get_name(&names, right.name_mask), right.value, right.extra_cost,
-                 level_cost, xp_cost);
+        result += format!("{}. [{}: {}+{}] + [{}: {}+{}] = {} ({}xp)\n", i + 1, get_name(&names, left.name_mask), left.value, left.extra_cost,
+                          get_name(&names, right.name_mask), right.value, right.extra_cost,
+                          level_cost, xp_cost).as_str();
+
     }
-    println!("Max step cost: {} ({max_xp_cost}xp)", calc_level(max_xp_cost));
-    println!("Final best cost: {} ({best_cost}xp)", calc_level(best_cost));
-    println!("Final worst cost: {total_level_cost} ({}xp)", calc_xp(total_level_cost));
+    result += format!("Max step cost: {} ({max_xp_cost}xp)\n", calc_level(max_xp_cost)).as_str();
+    result += format!("Final best cost: {} ({best_cost}xp)\n", calc_level(best_cost)).as_str();
+    result += format!("Final worst cost: {total_level_cost} ({}xp)\n", calc_xp(total_level_cost)).as_str();
+    result
 }
