@@ -26,7 +26,6 @@ struct Piece {
 struct TraceRecord {
     left: Piece,
     right: Piece,
-    cost: MC,
 }
 
 fn calc_xp(level: MC) -> MC {
@@ -107,7 +106,6 @@ fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, t
                 .chain(std::iter::once(TraceRecord {
                     left: left.clone(),
                     right: right.clone(),
-                    cost,
                 })).collect();
             let (result_cost, result_trace) = solve(books_free, &new_queue, total_cost + cost, best_cost, &new_trace);
             if best_trace.is_none() || result_cost < best_cost {
@@ -122,7 +120,6 @@ fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, t
                     .chain(std::iter::once(TraceRecord {
                         left: left.clone(),
                         right: right.clone(),
-                        cost,
                     })).collect::<Vec<TraceRecord>>()));
                 best_cost = result_cost;
             }
@@ -183,13 +180,14 @@ pub fn process(config: ConfigSchema) -> String {
     for i in 0..best_order.len() {
         let left = &best_order[i].left;
         let right = &best_order[i].right;
-        let xp_cost = best_order[i].cost;
+        let (_, xp_cost) = anvil(config.config.books_free, left, right);
         let level_cost = calc_level(xp_cost);
         total_level_cost += level_cost;
         if xp_cost > max_xp_cost {
             max_xp_cost = xp_cost;
         }
-        result += format!("{}. [{}: {},{}] + [{}: {},{}] = {} ({}xp)\n", i + 1, get_name(&names, left.name_mask), left.value, calc_penalty(MC::from(left.work_count)),
+        result += format!("{}. [{}: {},{}] + [{}: {},{}] = {} ({}xp)\n", i + 1,
+                          get_name(&names, left.name_mask), left.value, calc_penalty(MC::from(left.work_count)),
                           get_name(&names, right.name_mask), right.value, calc_penalty(MC::from(right.work_count)),
                           level_cost, xp_cost).as_str();
     }
