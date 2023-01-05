@@ -7,7 +7,8 @@ use itertools::{Itertools};
 use serde::{Deserialize, Serialize};
 use tinyvec::{tiny_vec, TinyVec};
 use std::mem;
-use lfu_cache::LfuCache;
+use std::num::NonZeroUsize;
+use lru::LruCache;
 
 const PIECE_TYPE_BOOK: MB = 0;
 const PIECE_TYPE_ITEM: MB = 1;
@@ -73,7 +74,7 @@ fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
     }, cost)
 }
 
-fn solve(books_free: bool, cache: &mut LfuCache<u64, Option<Box<[TraceRecord]>>>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
+fn solve(books_free: bool, cache: &mut LruCache<u64, Option<Box<[TraceRecord]>>>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
     let mut hasher = DefaultHasher::new();
     queue.hash(&mut hasher);
     let queue_hash = hasher.finish();
@@ -149,7 +150,7 @@ fn solve(books_free: bool, cache: &mut LfuCache<u64, Option<Box<[TraceRecord]>>>
     }
     // caching small queues is slower than calculating, also wastes memory
     if queue.len() > 3 {
-        cache.insert(queue_hash, best_trace.as_ref()
+        cache.put(queue_hash, best_trace.as_ref()
             .map(|x| x[trace.len()..].iter().cloned().collect()));
     }
     return (best_cost, best_trace);
@@ -200,13 +201,14 @@ pub fn process(config: ConfigSchema) -> String {
     }
 
     let trace = tiny_vec!([TraceRecord; 0]);
-    let mut cache: LfuCache<u64, Option<Box<[TraceRecord]>>> = LfuCache::with_capacity(match pieces.len() {
-        8 => 20_000, // 2 MB
-        9 => 200_000, // 20 MB
-        10 => 3_000_000, // 300 MB
-        11 => 30_000_000, // 3 GB
-        _ => 1_000 // 100 kB
-    });
+    let mut cache: LruCache<u64, Option<Box<[TraceRecord]>>> = LruCache::new(
+        NonZeroUsize::new(match pieces.len() {
+            8 => 15_000, // 1.5 MB
+            9 => 150_000, // 15 MB
+            10 => 2_500_000, // 250 MB
+            11 => 25_000_000, // 2.5 GB
+            _ => 1_000 // 100 kB
+        }).unwrap());
     let (best_cost, best_order) = solve(config.config.books_free, &mut cache, &pieces, 0, 4_294_967_295, &trace);
     let order = best_order.unwrap();
     let mut total_level_cost = 0;
