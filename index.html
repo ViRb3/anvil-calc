@@ -51,12 +51,18 @@
   <script type="module">
     import init, { process_wasm } from "./anvil_calc.js";
     var editor = ace.edit("editor");
+    var editor2 = ace.edit("editor2");
+    var spinner = document.getElementById("formFileSpinner");
+    var start = document.getElementById("submit");
     editor.setOptions({
       mode: "ace/mode/yaml",
       tabSize: 2,
       wrap: true,
-      showGutter: false,
+      showLineNumbers: false,
       showPrintMargin: false,
+    });
+    editor.getSession().on("changeAnnotation", function () {
+      start.disabled = editor.getSession().getAnnotations().length > 0;
     });
     editor.setValue(
       `config:
@@ -79,7 +85,6 @@ input:
 `,
       1
     );
-    var editor2 = ace.edit("editor2");
     editor2.setOptions({
       mode: "ace/mode/javascript",
       useWorker: false,
@@ -89,8 +94,6 @@ input:
     });
     editor2.setReadOnly(true);
     editor2.setValue("Click Submit to begin...\n", 1);
-    var spinner = document.getElementById("formFileSpinner");
-    var start = document.getElementById("submit");
     init().then(() => {
       start.addEventListener("click", function () {
         spinner.style.display = "inline-block";
