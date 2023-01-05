@@ -18,9 +18,8 @@ extern "C" {
 pub fn process_wasm(input: String) -> String {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let start = instant::Instant::now();
-    log("Preparing...");
     let config: ConfigSchema = serde_yaml::from_str(input.as_str()).expect("unable to parse input");
     let result = process(config);
-    log(format!("{}", start.elapsed().as_millis()).as_str());
+    log(format!("Done in {}ms", start.elapsed().as_millis()).as_str());
     return result;
 }

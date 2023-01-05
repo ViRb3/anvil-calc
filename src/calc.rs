@@ -6,27 +6,20 @@ use serde::{Deserialize, Serialize};
 use tinyvec::{tiny_vec, TinyVec};
 use std::mem;
 
-#[derive(Default, Clone)]
-#[repr(u8)]
-enum PieceType {
-    #[default]
-    Item,
-    Book,
-}
+const PIECE_TYPE_BOOK: MB = 0;
+const PIECE_TYPE_ITEM: MB = 1;
 
 const MS: usize = mem::size_of::<MB>() * 8;
 
-type MA = u8;
 type MB = u16;
 type MC = u32;
 
 #[derive(Default, Clone)]
 struct Piece {
     name_mask: MB,
-    value: MA,
-    work_count: MA,
-    extra_cost: MA,
-    ptype: PieceType,
+    value: MB,
+    work_count: MB,
+    ptype: MB,
 }
 
 #[derive(Default, Clone)]
@@ -61,26 +54,24 @@ const fn calc_penalty(work_count: MC) -> MC {
 }
 
 fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
-    let new_type = match (&left.ptype, &right.ptype) {
-        (PieceType::Book, PieceType::Book) => PieceType::Book,
-        _ => PieceType::Item,
+    let new_type = match (left.ptype, right.ptype) {
+        (PIECE_TYPE_BOOK, PIECE_TYPE_BOOK) => PIECE_TYPE_BOOK,
+        _ => PIECE_TYPE_ITEM,
     };
-    if books_free && matches!(new_type, PieceType::Book) {
+    if books_free && new_type == PIECE_TYPE_BOOK {
         return (Piece {
             name_mask: left.name_mask | right.name_mask,
             value: left.value + right.value,
             work_count: 0,
-            extra_cost: left.extra_cost + right.extra_cost,
             ptype: new_type,
         }, 0);
     }
     let cost = calc_xp(MC::from(right.value) + calc_penalty(MC::from(left.work_count)) +
-        calc_penalty(MC::from(right.work_count)) + MC::from(left.extra_cost) + MC::from(right.extra_cost));
+        calc_penalty(MC::from(right.work_count)));
     (Piece {
         name_mask: left.name_mask | right.name_mask,
         value: left.value + right.value,
         work_count: cmp::max(left.work_count, right.work_count) + 1,
-        extra_cost: left.extra_cost + right.extra_cost,
         ptype: new_type,
     }, cost)
 }
@@ -95,8 +86,8 @@ fn solve(books_free: bool, queue: &[Piece], total_cost: MC, mut best_cost: MC, t
     for (o1, o2) in pairs {
         let left = &queue[o1];
         let right = &queue[o2];
-        match (&left.ptype, &right.ptype) {
-            (PieceType::Book, PieceType::Item) => continue,
+        match (left.ptype, right.ptype) {
+            (PIECE_TYPE_BOOK, PIECE_TYPE_ITEM) => continue,
             _ => {}
         };
         let (combined, cost) = anvil(books_free, left, right);
@@ -151,7 +142,7 @@ struct Config {
     books_free: bool,
 }
 
-type InputPiece = (String, MA, MA, MA);
+type InputPiece = (String, MB, MB);
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Input {
@@ -176,17 +167,16 @@ pub fn process(config: ConfigSchema) -> String {
     let mut pieces = Vec::new();
     let mut names = Vec::new();
     let item_iter = config.input.items.iter()
-        .map(|item| (item, PieceType::Item));
+        .map(|item| (item, PIECE_TYPE_ITEM));
     let book_iter = config.input.books.iter()
-        .map(|item| (item, PieceType::Book));
+        .map(|item| (item, PIECE_TYPE_BOOK));
     for (i, (piece, ptype)) in item_iter.chain(book_iter).enumerate() {
-        let (name, value, work_count, extra_cost) = piece.clone();
+        let (name, value, work_count) = piece.clone();
         names.push(name);
         pieces.push(Piece {
             name_mask: 1 << i,
             value,
             work_count,
-            extra_cost,
             ptype,
         });
     }
@@ -205,10 +195,10 @@ pub fn process(config: ConfigSchema) -> String {
         if xp_cost > max_xp_cost {
             max_xp_cost = xp_cost;
         }
-        result += format!("{}. [{}: {}+{}] + [{}: {}+{}] = {} ({}xp)\n", i + 1, get_name(&names, left.name_mask), left.value, left.extra_cost,
-                          get_name(&names, right.name_mask), right.value, right.extra_cost,
-                          level_cost, xp_cost).as_str();
+        result += format!("{}. [{}: {}] + [{}: {}] = {} ({}xp)\n", i + 1, get_name(&names, left.name_mask), left.value,
+                          get_name(&names, right.name_mask), right.value, level_cost, xp_cost).as_str();
     }
+    result += "\n";
     result += format!("Max step cost: {} ({max_xp_cost}xp)\n", calc_level(max_xp_cost)).as_str();
     result += format!("Final best cost: {} ({best_cost}xp)\n", calc_level(best_cost)).as_str();
     result += format!("Final worst cost: {total_level_cost} ({}xp)\n", calc_xp(total_level_cost)).as_str();
