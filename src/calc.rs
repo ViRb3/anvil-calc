@@ -2,13 +2,12 @@ extern crate core;
 
 use std::cmp;
 use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashSet};
 use std::hash::{Hash, Hasher};
 use itertools::{Itertools};
 use serde::{Deserialize, Serialize};
 use tinyvec::{tiny_vec, TinyVec};
 use std::mem;
-use std::num::NonZeroUsize;
-use lru::LruCache;
 
 const PIECE_TYPE_BOOK: MB = 0;
 const PIECE_TYPE_ITEM: MB = 1;
@@ -74,26 +73,13 @@ fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
     }, cost)
 }
 
-fn solve(books_free: bool, cache: &mut LruCache<u64, Option<Box<[TraceRecord]>>>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
+fn solve(books_free: bool, null_paths: &mut HashSet<u64>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
     let mut hasher = DefaultHasher::new();
     queue.hash(&mut hasher);
     let queue_hash = hasher.finish();
-    match cache.get(&queue_hash) {
-        Some(cached_trace) => {
-            return match cached_trace {
-                Some(cached_trace) => {
-                    best_cost = 0;
-                    for record in trace.iter().chain(cached_trace.iter()) {
-                        let (_, cost) = anvil(books_free, &record.left, &record.right);
-                        best_cost += cost
-                    }
-                    (best_cost, Some(trace.iter().chain(cached_trace.iter()).cloned().collect()))
-                }
-                _ => (best_cost, None)
-            };
-        }
-        _ => {}
-    };
+    if null_paths.get(&queue_hash).is_some() {
+        return (best_cost, None);
+    }
     let mut best_trace: Option<Box<[TraceRecord]>> = None;
     let lefts = 0..queue.len();
     let pairs = lefts.flat_map(|l| {
@@ -130,7 +116,7 @@ fn solve(books_free: bool, cache: &mut LruCache<u64, Option<Box<[TraceRecord]>>>
                     left: left.clone(),
                     right: right.clone(),
                 })).collect::<TinyVec<[TraceRecord; MS]>>();
-            let (result_cost, result_trace) = solve(books_free, cache, &new_queue, total_cost + cost, best_cost, &new_trace);
+            let (result_cost, result_trace) = solve(books_free, null_paths, &new_queue, total_cost + cost, best_cost, &new_trace);
             if best_trace.is_none() || result_cost < best_cost {
                 best_trace = result_trace;
                 best_cost = result_cost;
@@ -148,10 +134,8 @@ fn solve(books_free: bool, cache: &mut LruCache<u64, Option<Box<[TraceRecord]>>>
             }
         }
     }
-    // caching small queues is slower than calculating, also wastes memory
-    if queue.len() > 3 {
-        cache.put(queue_hash, best_trace.as_ref()
-            .map(|x| x[trace.len()..].iter().cloned().collect()));
+    if best_trace.is_none() {
+        null_paths.insert(queue_hash);
     }
     return (best_cost, best_trace);
 }
@@ -205,15 +189,8 @@ pub fn process(config: ConfigSchema) -> String {
     }
 
     let trace = tiny_vec!([TraceRecord; 0]);
-    let mut cache: LruCache<u64, Option<Box<[TraceRecord]>>> = LruCache::new(
-        NonZeroUsize::new(match pieces.len() {
-            8 => 15_000, // 1.5 MB
-            9 => 150_000, // 15 MB
-            10 => 2_500_000, // 250 MB
-            11 => 25_000_000, // 2.5 GB
-            _ => 1_000 // 100 kB
-        }).unwrap());
-    let (best_cost, best_order) = solve(config.config.books_free, &mut cache, &pieces, 0, 4_294_967_295, &trace);
+    let mut null_paths: HashSet<u64> = HashSet::new();
+    let (best_cost, best_order) = solve(config.config.books_free, &mut null_paths, &pieces, 0, 4_294_967_295, &trace);
     let order = best_order.unwrap();
     let mut total_level_cost = 0;
     let mut max_xp_cost = 0;
