@@ -2,17 +2,15 @@ config:
   # Combining books is free when using Enchantment Library (Apotheosis)
   books_free: false
 input:
-  # [name, value (level*multiplier), work count]
+  # [name, level x multiplier, penalty]
   # https://minecraft.fandom.com/wiki/Anvil_mechanics#Costs_for_combining_enchantments
   items:
-    - ["boots 1", 1, 2]
-    - ["boots 2", 3, 4]
-    - ["boots 3", 5, 6]
+    - ["boots", 0x0, 0]
   books:
-    - ["soul speed", 12, 0]
-    - ["thorns", 12, 0]
-    - ["feather falling", 4, 0]
-    - ["depth strider", 6, 0]
-    - ["protection", 4, 0]
-    - ["unbreaking", 3, 0]
-    - ["mending", 2, 0]
+    - ["soul speed", 3x4, 0]
+    - ["thorns", 3x4, 0]
+    - ["feather falling", 4x1, 0]
+    - ["depth strider", 3x2, 0]
+    - ["protection", 4x1, 0]
+    - ["unbreaking", 3x1, 0]
+    - ["mending", 1x2, 0]

@@ -55,6 +55,16 @@ const fn calc_penalty(work_count: MC) -> MC {
     (1 << work_count) - 1
 }
 
+const fn calc_work_count(penalty: MC) -> MC {
+    let mut test_penalty = 0;
+    let mut work_count = 0;
+    while test_penalty < penalty {
+        work_count += 1;
+        test_penalty = calc_penalty(work_count);
+    }
+    work_count
+}
+
 fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
     let new_name_mask = left.name_mask | right.name_mask;
     if books_free && new_name_mask & 1 == PIECE_TYPE_BOOK {
@@ -75,7 +85,7 @@ fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
 
 fn solve(books_free: bool, null_paths: &mut HashSet<u64>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
     let mut hasher = DefaultHasher::new();
-    queue.iter().sorted_by_key(|x|x.name_mask).for_each(|x| x.hash(&mut hasher));
+    queue.iter().sorted_by_key(|x| x.name_mask).for_each(|x| x.hash(&mut hasher));
     let queue_hash = hasher.finish();
     if null_paths.get(&queue_hash).is_some() {
         return (best_cost, None);
@@ -145,7 +155,7 @@ struct Config {
     books_free: bool,
 }
 
-type InputPiece = (String, MA, MA);
+type InputPiece = (String, String, MA);
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Input {
@@ -174,13 +184,13 @@ pub fn process(config: ConfigSchema) -> String {
     let book_iter = config.input.books.iter()
         .map(|item| (item, PIECE_TYPE_BOOK));
     for (i, (piece, ptype)) in item_iter.chain(book_iter).enumerate() {
-        let (name, value, work_count) = piece.clone();
+        let (name, level_multiplier, penalty) = piece.clone();
         names.push(name);
         pieces.push(Piece {
             // last bit carries piece type
             name_mask: (1 << i) | ptype,
-            value,
-            work_count,
+            value: level_multiplier.split("x").map(|x| x.trim().parse::<MA>().unwrap()).product(),
+            work_count: calc_work_count(MC::from(penalty)) as MA,
         });
     }
 
