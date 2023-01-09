@@ -86,6 +86,7 @@ fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
 fn solve(books_free: bool, null_paths: &mut HashSet<u64>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
     let mut hasher = DefaultHasher::new();
     queue.iter().sorted_by_key(|x| x.name_mask).for_each(|x| x.hash(&mut hasher));
+    total_cost.hash(&mut hasher);
     let queue_hash = hasher.finish();
     if null_paths.get(&queue_hash).is_some() {
         return (best_cost, None);
