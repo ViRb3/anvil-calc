@@ -1,6 +1,9 @@
 config:
   # Combining books is free when using Enchantment Library (Apotheosis)
   books_free: false
+  # If you can use the minimum required level on each step, enable this and the final cost will be much lower
+  # Otherwise, leave this disabled or your final cost will be higher
+  optimize_xp: false
 input:
   # [name, level x multiplier, penalty]
   # https://minecraft.fandom.com/wiki/Anvil_mechanics#Costs_for_combining_enchantments

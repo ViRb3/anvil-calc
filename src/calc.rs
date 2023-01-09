@@ -65,17 +65,20 @@ const fn calc_work_count(penalty: MC) -> MC {
     work_count
 }
 
-fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
+fn anvil(config: &Config, left: &Piece, right: &Piece) -> (Piece, MC) {
     let new_name_mask = left.name_mask | right.name_mask;
-    if books_free && new_name_mask & 1 == PIECE_TYPE_BOOK {
+    if config.books_free && new_name_mask & 1 == PIECE_TYPE_BOOK {
         return (Piece {
             name_mask: new_name_mask,
             value: left.value + right.value,
             work_count: 0,
         }, 0);
     }
-    let cost = calc_xp(MC::from(right.value) + calc_penalty(MC::from(left.work_count)) +
-        calc_penalty(MC::from(right.work_count)));
+    let mut cost = MC::from(right.value) + calc_penalty(MC::from(left.work_count)) +
+        calc_penalty(MC::from(right.work_count));
+    if config.optimize_xp {
+        cost = calc_xp(cost);
+    }
     (Piece {
         name_mask: new_name_mask,
         value: left.value + right.value,
@@ -83,7 +86,7 @@ fn anvil(books_free: bool, left: &Piece, right: &Piece) -> (Piece, MC) {
     }, cost)
 }
 
-fn solve(books_free: bool, null_paths: &mut HashSet<u64>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
+fn solve(config: &Config, null_paths: &mut HashSet<u64>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
     let mut hasher = DefaultHasher::new();
     queue.iter().sorted_by_key(|x| x.name_mask).for_each(|x| x.hash(&mut hasher));
     total_cost.hash(&mut hasher);
@@ -103,7 +106,7 @@ fn solve(books_free: bool, null_paths: &mut HashSet<u64>, queue: &[Piece], total
         if left.name_mask & 1 == PIECE_TYPE_BOOK && right.name_mask & 1 == PIECE_TYPE_ITEM {
             continue;
         }
-        let (combined, cost) = anvil(books_free, left, right);
+        let (combined, cost) = anvil(&config, left, right);
         if total_cost + cost > best_cost {
             continue;
         }
@@ -127,7 +130,7 @@ fn solve(books_free: bool, null_paths: &mut HashSet<u64>, queue: &[Piece], total
                     left: left.clone(),
                     right: right.clone(),
                 })).collect::<TinyVec<[TraceRecord; MS]>>();
-            let (result_cost, result_trace) = solve(books_free, null_paths, &new_queue, total_cost + cost, best_cost, &new_trace);
+            let (result_cost, result_trace) = solve(config, null_paths, &new_queue, total_cost + cost, best_cost, &new_trace);
             if best_trace.is_none() || result_cost < best_cost {
                 best_trace = result_trace;
                 best_cost = result_cost;
@@ -154,6 +157,7 @@ fn solve(books_free: bool, null_paths: &mut HashSet<u64>, queue: &[Piece], total
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
     books_free: bool,
+    optimize_xp: bool,
 }
 
 type InputPiece = (String, String, MA);
@@ -177,12 +181,21 @@ fn get_name(names: &[String], name_mask: MB) -> String {
         .map(|(_, n)| n).join(" + ");
 }
 
-pub fn process(config: ConfigSchema) -> String {
+fn expand_cost(config: &Config, cost: MC) -> (MC, MC) {
+    if config.optimize_xp {
+        (calc_level(cost), cost)
+    } else {
+        (cost, calc_xp(cost))
+    }
+}
+
+pub fn process(schema: ConfigSchema) -> String {
+    let (input, config) = (schema.input, schema.config);
     let mut pieces = Vec::new();
     let mut names = Vec::new();
-    let item_iter = config.input.items.iter()
+    let item_iter = input.items.iter()
         .map(|item| (item, PIECE_TYPE_ITEM));
-    let book_iter = config.input.books.iter()
+    let book_iter = input.books.iter()
         .map(|item| (item, PIECE_TYPE_BOOK));
     for (i, (piece, ptype)) in item_iter.chain(book_iter).enumerate() {
         let (name, level_multiplier, penalty) = piece.clone();
@@ -201,17 +214,16 @@ pub fn process(config: ConfigSchema) -> String {
 
     let trace = tiny_vec!([TraceRecord; 0]);
     let mut null_paths: HashSet<u64> = HashSet::new();
-    let (best_cost, best_order) = solve(config.config.books_free, &mut null_paths, &pieces, 0, 4_294_967_295, &trace);
+    let (best_cost, best_order) = solve(&config, &mut null_paths, &pieces, 0, 4_294_967_295, &trace);
+    let (best_level_cost, best_xp_cost) = expand_cost(&config, best_cost);
     let order = best_order.unwrap();
-    let mut total_level_cost = 0;
     let mut max_xp_cost = 0;
     let mut result = String::new();
     for i in 0..order.len() {
         let left = &order[i].left;
         let right = &order[i].right;
-        let (_, xp_cost) = anvil(config.config.books_free, left, right);
-        let level_cost = calc_level(xp_cost);
-        total_level_cost += level_cost;
+        let (_, cost) = anvil(&config, left, right);
+        let (level_cost, xp_cost) = expand_cost(&config, cost);
         if xp_cost > max_xp_cost {
             max_xp_cost = xp_cost;
         }
@@ -222,7 +234,6 @@ pub fn process(config: ConfigSchema) -> String {
     }
     result += "\n";
     result += format!("Max step cost: {} ({max_xp_cost}xp)\n", calc_level(max_xp_cost)).as_str();
-    result += format!("Final best cost: {} ({best_cost}xp)\n", calc_level(best_cost)).as_str();
-    result += format!("Final worst cost: {total_level_cost} ({}xp)\n", calc_xp(total_level_cost)).as_str();
+    result += format!("Total cost: {best_level_cost} ({best_xp_cost}xp)\n").as_str();
     result
 }
