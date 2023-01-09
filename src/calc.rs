@@ -115,19 +115,13 @@ fn solve(config: &Config, null_paths: &mut HashSet<u64>, queue: &[Piece], total_
         if total_cost + cost > best_cost {
             continue;
         }
-        let new_queue = (if o1 < o2 {
-            queue[..o1].iter()
-                .chain(queue[o1 + 1..o2].iter())
-                .chain(queue[o2 + 1..].iter())
-                .cloned()
-                .chain(std::iter::once(combined))
-        } else {
-            queue[..o2].iter()
-                .chain(queue[o2 + 1..o1].iter())
-                .chain(queue[o1 + 1..].iter())
-                .cloned()
-                .chain(std::iter::once(combined))
-        }).collect::<TinyVec<[Piece; MS]>>();
+        let (i1, i2) = if o1 < o2 { (o1, o2) } else { (o2, o1) };
+        let new_queue = queue[..i1].iter()
+            .chain(queue[i1 + 1..i2].iter())
+            .chain(queue[i2 + 1..].iter())
+            .cloned()
+            .chain(std::iter::once(combined))
+            .collect::<TinyVec<[Piece; MS]>>();
         if new_queue.len() > 1 {
             let new_trace = trace.iter()
                 .cloned()
