@@ -111,7 +111,7 @@ fn solve(config: &Config, null_paths: &mut HashSet<u64>, queue: &[Piece], total_
         if left.name_mask & 1 == PIECE_TYPE_BOOK && right.name_mask & 1 == PIECE_TYPE_ITEM {
             continue;
         }
-        let (combined, cost) = anvil(&config, left, right);
+        let (combined, cost) = anvil(config, left, right);
         if total_cost + cost > best_cost {
             continue;
         }
@@ -150,7 +150,7 @@ fn solve(config: &Config, null_paths: &mut HashSet<u64>, queue: &[Piece], total_
     if best_trace.is_none() {
         null_paths.insert(queue_hash);
     }
-    return (best_cost, best_trace);
+    (best_cost, best_trace)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -202,7 +202,7 @@ pub fn process(schema: ConfigSchema) -> String {
         pieces.push(Piece {
             // last bit carries piece type
             name_mask: (1 << i) | ptype,
-            value: level_multiplier.split("x").map(|x| x.trim().parse::<MA>().unwrap()).product(),
+            value: level_multiplier.split('x').map(|x| x.trim().parse::<MA>().unwrap()).product(),
             work_count: calc_work_count(MC::from(penalty)) as MA,
         });
     }

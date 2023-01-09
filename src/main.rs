@@ -14,5 +14,5 @@ fn main() {
     let config: ConfigSchema = serde_yaml::from_reader(file).expect("unable to read config.yml");
     let result = process(config);
     println!("Done in {}ms", start.elapsed().as_millis());
-    println!("{}", result);
+    println!("{result}");
 }

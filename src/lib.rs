@@ -21,5 +21,5 @@ pub fn process_wasm(input: String) -> String {
     let config: ConfigSchema = serde_yaml::from_str(input.as_str()).expect("unable to parse input");
     let result = process(config);
     log(format!("Done in {}ms", start.elapsed().as_millis()).as_str());
-    return result;
+    result
 }
