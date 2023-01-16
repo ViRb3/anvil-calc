@@ -111,6 +111,10 @@ fn solve(config: &Config, null_paths: &mut HashSet<u64>, queue: &[Piece], total_
         if left.name_mask & 1 == PIECE_TYPE_BOOK && right.name_mask & 1 == PIECE_TYPE_ITEM {
             continue;
         }
+        // if both items are books, we will always want to minimize cost
+        if left.name_mask & 1 == PIECE_TYPE_BOOK && right.value > left.value {
+            continue;
+        }
         let (combined, cost) = anvil(config, left, right);
         if total_cost + cost > best_cost {
             continue;
@@ -205,10 +209,6 @@ pub fn process(schema: ConfigSchema) -> String {
             value: level_multiplier.split('x').map(|x| x.trim().parse::<MA>().unwrap()).product(),
             work_count: calc_work_count(MC::from(penalty)) as MA,
         });
-    }
-
-    if pieces.len() > 11 {
-        return String::from("Too many inputs, calculation not possible.\n");
     }
 
     let trace = tiny_vec!([TraceRecord; 0]);
