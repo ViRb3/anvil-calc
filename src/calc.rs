@@ -180,7 +180,7 @@ pub struct ConfigSchema {
 fn get_name(names: &[String], name_mask: MB) -> String {
     return names.iter()
         .enumerate()
-        .filter(|(i, _)| (name_mask >> i) & 1 == 1)
+        .filter(|(i, _)| (name_mask >> (i + 1)) & 1 == 1)
         .map(|(_, n)| n).join(" + ");
 }
 
@@ -205,7 +205,7 @@ pub fn process(schema: ConfigSchema) -> String {
         names.push(name);
         pieces.push(Piece {
             // last bit carries piece type
-            name_mask: (1 << i) | ptype,
+            name_mask: (1 << (i + 1)) | ptype,
             value: level_multiplier.split('x').map(|x| x.trim().parse::<MA>().unwrap()).product(),
             work_count: calc_work_count(MC::from(penalty)) as MA,
         });
