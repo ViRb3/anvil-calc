@@ -2,7 +2,7 @@ extern crate core;
 
 use std::cmp;
 use std::collections::hash_map::DefaultHasher;
-use std::collections::{HashSet};
+use std::collections::{HashMap};
 use std::hash::{Hash, Hasher};
 use itertools::{Itertools};
 use serde::{Deserialize, Serialize};
@@ -86,7 +86,7 @@ fn anvil(config: &Config, left: &Piece, right: &Piece) -> (Piece, MC) {
     }, cost)
 }
 
-fn solve(config: &Config, null_paths: &mut HashSet<u64>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
+fn solve(config: &Config, cache: &mut HashMap<u64, (MC, Option<Box<[TraceRecord]>>)>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
     let mut hasher = DefaultHasher::new();
     queue.iter().sorted_by(|a, b|
         a.value.cmp(&b.value).then(a.work_count.cmp(&b.work_count))
@@ -96,8 +96,10 @@ fn solve(config: &Config, null_paths: &mut HashSet<u64>, queue: &[Piece], total_
     });
     total_cost.hash(&mut hasher);
     let queue_hash = hasher.finish();
-    if null_paths.get(&queue_hash).is_some() {
-        return (best_cost, None);
+    let cached = cache.get(&queue_hash);
+    if cached.is_some() {
+        let (a, b) = cached.unwrap();
+        return (*a, b.clone());
     }
     let mut best_trace: Option<Box<[TraceRecord]>> = None;
     let lefts = 0..queue.len();
@@ -133,7 +135,7 @@ fn solve(config: &Config, null_paths: &mut HashSet<u64>, queue: &[Piece], total_
                     left: left.clone(),
                     right: right.clone(),
                 })).collect::<TinyVec<[TraceRecord; MS]>>();
-            let (result_cost, result_trace) = solve(config, null_paths, &new_queue, total_cost + cost, best_cost, &new_trace);
+            let (result_cost, result_trace) = solve(config, cache, &new_queue, total_cost + cost, best_cost, &new_trace);
             if best_trace.is_none() || result_cost < best_cost {
                 best_trace = result_trace;
                 best_cost = result_cost;
@@ -151,9 +153,7 @@ fn solve(config: &Config, null_paths: &mut HashSet<u64>, queue: &[Piece], total_
             }
         }
     }
-    if best_trace.is_none() {
-        null_paths.insert(queue_hash);
-    }
+    cache.insert(queue_hash, (best_cost, best_trace.clone()));
     (best_cost, best_trace)
 }
 
@@ -212,8 +212,8 @@ pub fn process(schema: ConfigSchema) -> String {
     }
 
     let trace = tiny_vec!([TraceRecord; 0]);
-    let mut null_paths: HashSet<u64> = HashSet::new();
-    let (best_cost, best_order) = solve(&config, &mut null_paths, &pieces, 0, 4_294_967_295, &trace);
+    let mut cache: HashMap<u64, (MC, Option<Box<[TraceRecord]>>)> = HashMap::new();
+    let (best_cost, best_order) = solve(&config, &mut cache, &pieces, 0, 4_294_967_295, &trace);
     let (best_level_cost, best_xp_cost) = expand_cost(&config, best_cost);
     let order = best_order.unwrap();
     let mut max_xp_cost = 0;
