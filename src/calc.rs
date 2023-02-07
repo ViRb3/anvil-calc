@@ -31,6 +31,13 @@ struct TraceRecord {
     right: Piece,
 }
 
+#[derive(Default, Debug, Clone, Hash)]
+struct CacheRecord {
+    total_cost: MC,
+    best_cost: MC,
+    trace: Option<Box<[TraceRecord]>>,
+}
+
 fn calc_xp(level: MC) -> MC {
     if level < 16 {
         level.pow(2) + 6 * level
@@ -86,7 +93,7 @@ fn anvil(config: &Config, left: &Piece, right: &Piece) -> (Piece, MC) {
     }, cost)
 }
 
-fn solve(config: &Config, cache: &mut HashMap<u64, (MC, Option<Box<[TraceRecord]>>)>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
+fn solve(config: &Config, cache: &mut HashMap<u64, CacheRecord>, queue: &[Piece], total_cost: MC, mut best_cost: MC, trace: &[TraceRecord]) -> (MC, Option<Box<[TraceRecord]>>) {
     let mut hasher = DefaultHasher::new();
     queue.iter().sorted_by(|a, b|
         a.value.cmp(&b.value).then(a.work_count.cmp(&b.work_count))
@@ -94,12 +101,11 @@ fn solve(config: &Config, cache: &mut HashMap<u64, (MC, Option<Box<[TraceRecord]
         x.value.hash(&mut hasher);
         x.work_count.hash(&mut hasher);
     });
-    total_cost.hash(&mut hasher);
     let queue_hash = hasher.finish();
-    let cached = cache.get(&queue_hash);
-    if cached.is_some() {
-        let (a, b) = cached.unwrap();
-        return (*a, b.clone());
+    if let Some(record) = cache.get(&queue_hash) {
+        if total_cost >= record.total_cost {
+            return (record.best_cost, None);
+        }
     }
     let mut best_trace: Option<Box<[TraceRecord]>> = None;
     let lefts = 0..queue.len();
@@ -153,7 +159,11 @@ fn solve(config: &Config, cache: &mut HashMap<u64, (MC, Option<Box<[TraceRecord]
             }
         }
     }
-    cache.insert(queue_hash, (best_cost, best_trace.clone()));
+    cache.insert(queue_hash, CacheRecord {
+        total_cost,
+        best_cost,
+        trace: best_trace.clone(),
+    });
     (best_cost, best_trace)
 }
 
@@ -216,7 +226,7 @@ pub fn process(schema: ConfigSchema) -> String {
     }
 
     let trace = tiny_vec!([TraceRecord; 0]);
-    let mut cache: HashMap<u64, (MC, Option<Box<[TraceRecord]>>)> = HashMap::new();
+    let mut cache: HashMap<u64, CacheRecord> = HashMap::new();
     let (best_cost, best_order) = solve(&config, &mut cache, &pieces, 0, 4_294_967_295, &trace);
     let (best_level_cost, best_xp_cost) = expand_cost(&config, best_cost);
     let order = best_order.unwrap();
