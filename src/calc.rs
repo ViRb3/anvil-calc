@@ -211,6 +211,10 @@ pub fn process(schema: ConfigSchema) -> String {
         });
     }
 
+    if pieces.len() > MS - 1 {
+        return String::from("Too many inputs, calculation not possible.\n");
+    }
+
     let trace = tiny_vec!([TraceRecord; 0]);
     let mut cache: HashMap<u64, (MC, Option<Box<[TraceRecord]>>)> = HashMap::new();
     let (best_cost, best_order) = solve(&config, &mut cache, &pieces, 0, 4_294_967_295, &trace);
