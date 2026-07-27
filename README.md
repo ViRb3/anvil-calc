@@ -38,6 +38,10 @@ Then, simply run it from `target/release/anvil-calc`. Make sure `config.yml` is 
 	<img width="1024"  src="screenshot.webp">
 </p>
 
+## How to get modded enchantment multipliers
+
+Put a blank item in an anvil (wooden sword, etc.) along with your enchantment on the right, and see how much it would cost. If you have, say, `Life Leech 2` enchantment and it costs 6 levels, then you know that the enchantment level is 2 and therefore its multiplier is `6 / 2 = 3`. You don't even need to input both in the calculator, just use 6 instead of 2x3. The expanded form is just for convenience.
+
 ## Technical details
 
 The solver uses grouped multiset dynamic programming with sparse Pareto frontiers over prior-work counts. Mechanically interchangeable pieces share a mixed-radix count dimension instead of being treated as separately labelled subsets. It considers every relevant binary merge tree while discarding states that cannot improve either cost or resulting work count. Runtime therefore depends primarily on the number and multiplicity of distinct `(value, prior work, type)` groups rather than only the raw piece count.
