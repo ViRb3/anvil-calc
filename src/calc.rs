@@ -94,6 +94,21 @@ const fn calc_level(xp: Cost) -> Cost {
     level
 }
 
+const fn displayed_total_cost(
+    optimize_per_step: bool,
+    total_level_cost: Cost,
+    separately_funded_xp_cost: Cost,
+) -> (Cost, Cost) {
+    if optimize_per_step {
+        (
+            calc_level(separately_funded_xp_cost),
+            separately_funded_xp_cost,
+        )
+    } else {
+        (total_level_cost, calc_xp(total_level_cost))
+    }
+}
+
 const fn calc_penalty(work_count: WorkCount) -> Cost {
     if work_count >= SATURATED_WORK_COUNT {
         Cost::MAX
@@ -546,7 +561,7 @@ pub fn process(schema: ConfigSchema) -> String {
         separately_funded_xp_cost += xp_cost;
         max_xp_cost = cmp::max(max_xp_cost, xp_cost);
         result += format!(
-            "{}. [{}: {},{}] + [{}: {},{}] = {} levels ({} XP)\n",
+            "{}. [{}: {},{}] + [{}: {},{}] = {} lvl ({} xp)\n",
             index + 1,
             get_name(&names, &left.name_indices),
             left.value,
@@ -559,25 +574,27 @@ pub fn process(schema: ConfigSchema) -> String {
         )
         .as_str();
     }
-    result += "\n";
-    result += format!(
-        "Max step cost: {} levels ({max_xp_cost} XP)\n",
-        calc_level(max_xp_cost)
-    )
-    .as_str();
-    let upfront_xp_cost = calc_xp(total_level_cost);
     let objective = if config.optimize_per_step {
         debug_assert_eq!(best_cost, separately_funded_xp_cost);
         "exact levels for each step"
     } else {
         debug_assert_eq!(best_cost, total_level_cost);
-        "all levels at once"
+        "all levels up front"
     };
+    let (displayed_total_levels, displayed_total_xp) = displayed_total_cost(
+        config.optimize_per_step,
+        total_level_cost,
+        separately_funded_xp_cost,
+    );
+    result += "\n";
     result += format!("Optimized for: {objective}\n").as_str();
-    result += format!("Total anvil cost: {total_level_cost} levels\n").as_str();
-    result += format!("XP if all levels at once: {upfront_xp_cost}\n").as_str();
-    result += format!("XP if exact levels for each step: {separately_funded_xp_cost}\n")
-        .as_str();
+    result += format!(
+        "Max step cost: {} lvl ({max_xp_cost} xp)\n",
+        calc_level(max_xp_cost)
+    )
+    .as_str();
+    result +=
+        format!("Total cost: {displayed_total_levels} lvl ({displayed_total_xp} xp)\n").as_str();
     result
 }
 
@@ -746,8 +763,14 @@ mod tests {
         };
 
         let result = process(schema);
-        assert!(result.contains("Total anvil cost:"));
+        assert!(result.contains("Total cost:"));
         assert!(result.contains("book 20"));
+    }
+
+    #[test]
+    fn displayed_total_cost_matches_the_optimization_mode() {
+        assert_eq!(displayed_total_cost(false, 66, 1_246), (66, 11_097));
+        assert_eq!(displayed_total_cost(true, 66, 1_246), (29, 1_246));
     }
 
     #[test]

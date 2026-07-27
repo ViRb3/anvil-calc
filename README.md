@@ -1,18 +1,19 @@
 <p align="center">
-    <img width="256" heigth="256" src="logo.png">
+    <img width="256" heigth="256" src="logo.webp">
+    <h1 align="center">anvil-calc</h1>
     <p align="center">
-        Optimal enchantment order calculator for modded Minecraft
+        The fastest enchantment order calculator for modded Minecraft
     </p>
 </p>
 
 
 ## Features
 
-- Minimalistic, text-based UI, optimized for fast typing
+- Simple text-based (YAML) input, graph-based output for easy viewing
 - No fixed item/book limit; duplicate-heavy inputs scale especially well
 - Custom prior work penalty
 - User-defined enchantments
-- Optimize for using all levels at once, or the exact levels for each step
+- Optimize for using all levels up front, or the exact levels for each step
 - Free books mode (Apotheosis)
 
 ## Usage
@@ -34,7 +35,7 @@ Then, simply run it from `target/release/anvil-calc`. Make sure `config.yml` is 
 ## Screenshot
 
 <p align="center">
-	<img width="512"  src="screenshot.png">
+	<img width="1024"  src="screenshot.webp">
 </p>
 
 ## Technical details
