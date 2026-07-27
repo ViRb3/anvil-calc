@@ -1,81 +1,941 @@
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Minecraft Anvil Calculator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
-      integrity="sha256-wLz3iY/cO4e6vKZ4zRmo4+9XDpMcgKOvv/zEU3OMlRo="
-      crossorigin="anonymous"
+    <meta
+      name="description"
+      content="The fastest enchantment order calculator for modded Minecraft."
     />
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha256-lSABj6XYH05NydBq+1dvkMu6uiCc/MbLYOFGRkf3iQs="
-      crossorigin="anonymous"
-    ></script>
+    <title>Minecraft Anvil Calculator</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #090f1c;
+        --panel: #111b2e;
+        --panel-raised: #19263d;
+        --border: #354661;
+        --text: #f3f5ff;
+        --muted: #a8b2c5;
+        --accent: #31abc1;
+        --accent-bright: #37d5e8;
+        --accent-dark: #103a51;
+        --violet: #a072da;
+        --cost: #d5cfef;
+        --node-heading: #7ee8f4;
+        --node-name: #f3f5ff;
+        --node-cost: #d8b4fe;
+        --node-detail: #f2c879;
+        --danger: #ff8c8c;
+        --shadow: 0 20px 60px rgb(0 0 0 / 28%);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 12% -8%, #123b4d 0, transparent 30rem),
+          radial-gradient(circle at 92% 0%, #30234e 0, transparent 34rem),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      button,
+      summary {
+        font: inherit;
+      }
+
+      a {
+        color: var(--accent-bright);
+      }
+
+      .shell {
+        width: min(1600px, 100%);
+        margin: 0 auto;
+        padding: 28px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .brand-mark {
+        display: block;
+        width: 78px;
+        height: 52px;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 14px rgb(49 171 193 / 20%));
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+        letter-spacing: -0.025em;
+      }
+
+      .tagline {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .github-link {
+        text-decoration: none;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(320px, 470px) minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+
+      .workspace--configuration-collapsed {
+        grid-template-columns: 54px minmax(0, 1fr);
+      }
+
+      .panel {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: color-mix(in srgb, var(--panel) 94%, transparent);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 62px;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .panel-header h2 {
+        font-size: 1rem;
+        letter-spacing: 0.01em;
+      }
+
+      .panel-heading-copy {
+        min-width: 0;
+      }
+
+      .panel-kicker {
+        color: var(--muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      #editor {
+        width: 100%;
+        height: min(64vh, 620px);
+        min-height: 430px;
+      }
+
+      .configuration-toggle {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel-raised);
+        color: var(--accent-bright);
+        cursor: pointer;
+        font-size: 1.15rem;
+      }
+
+      .configuration-toggle::before {
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        content: "";
+        transform: rotate(135deg);
+      }
+
+      .configuration-toggle:hover {
+        border-color: var(--accent);
+      }
+
+      .configuration-panel--collapsed .panel-header {
+        justify-content: center;
+        padding-inline: 9px;
+      }
+
+      .configuration-panel--collapsed .panel-heading-copy,
+      .configuration-panel--collapsed .configuration-body {
+        display: none;
+      }
+
+      .configuration-panel--collapsed .configuration-toggle::before {
+        transform: rotate(-45deg);
+      }
+
+      .editor-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        border-top: 1px solid var(--border);
+      }
+
+      #submit,
+      #copyShareLink {
+        display: inline-flex;
+        position: relative;
+        overflow: hidden;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        border-radius: 10px;
+        font-weight: 750;
+        cursor: pointer;
+        transition: filter 120ms ease;
+      }
+
+      #submit {
+        flex: 1;
+        border: 1px solid #77e5ef;
+        background: var(--accent-bright);
+        color: #091220;
+      }
+
+      #copyShareLink {
+        flex: 0 0 auto;
+        width: 9rem;
+        padding-inline: 14px;
+        border: 1px solid var(--border);
+        background: var(--panel-raised);
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      .button-label {
+        position: relative;
+        z-index: 1;
+      }
+
+      #submit:hover:not(:disabled),
+      #copyShareLink:hover:not(:disabled) {
+        filter: brightness(1.08);
+      }
+
+      #submit:disabled {
+        cursor: not-allowed;
+        filter: saturate(0.3);
+        opacity: 0.6;
+      }
+
+      #copyShareLink:hover {
+        border-color: var(--accent);
+      }
+
+      #copyShareLink.share-link-copied {
+        border-color: var(--accent);
+        color: var(--accent-bright);
+      }
+
+      #submit.is-calculating {
+        border-color: var(--accent);
+        background: var(--accent-dark);
+        color: var(--text);
+        filter: none;
+        opacity: 1;
+      }
+
+      .button-progress {
+        position: absolute;
+        z-index: 0;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .button-progress::before {
+        position: absolute;
+        inset-block: 0;
+        left: 0;
+        width: 42%;
+        background: rgb(55 213 232 / 65%);
+        content: "";
+        animation: progress-sweep 1.05s ease-in-out infinite;
+      }
+
+      @keyframes progress-sweep {
+        from {
+          transform: translateX(-110%);
+        }
+
+        to {
+          transform: translateX(350%);
+        }
+      }
+
+      .results {
+        min-height: 620px;
+      }
+
+      .empty-state {
+        display: grid;
+        min-height: 560px;
+        padding: 40px;
+        place-content: center;
+        text-align: center;
+      }
+
+      .empty-icon {
+        margin-bottom: 18px;
+        color: var(--accent-bright);
+        font-size: 3rem;
+        opacity: 0.9;
+      }
+
+      .empty-state h2 {
+        margin-bottom: 8px;
+        font-size: 1.2rem;
+      }
+
+      .empty-state p {
+        max-width: 420px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .result-content {
+        padding: 18px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(120px, 1fr));
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .metric {
+        min-height: 92px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--panel-raised);
+      }
+
+      .metric-label {
+        display: block;
+        min-height: 2.1em;
+        color: var(--muted);
+        font-size: 0.72rem;
+        line-height: 1.25;
+        text-transform: uppercase;
+        letter-spacing: 0.055em;
+      }
+
+      .metric-value {
+        display: block;
+        margin-top: 8px;
+        color: var(--cost);
+        font-size: clamp(1rem, 2vw, 1.25rem);
+        font-variant-numeric: tabular-nums;
+        font-weight: 750;
+      }
+
+      .graph-card {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background:
+          linear-gradient(rgb(255 255 255 / 2%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(255 255 255 / 2%) 1px, transparent 1px),
+          #111713;
+        background-size: 28px 28px;
+      }
+
+      .graph-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--border);
+        background: rgb(17 27 46 / 92%);
+      }
+
+      .graph-heading-group {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .graph-toolbar p {
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .graph-controls {
+        display: flex;
+        gap: 6px;
+      }
+
+      .graph-control {
+        display: grid;
+        min-width: 34px;
+        height: 34px;
+        padding: 0 10px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel-raised);
+        color: var(--text);
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .graph-control:hover {
+        border-color: var(--accent);
+        color: var(--accent-bright);
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .legend i {
+        width: 9px;
+        height: 9px;
+        border-radius: 3px;
+      }
+
+      #mergeGraph {
+        display: block;
+        width: 100%;
+        height: min(62vh, 580px);
+        min-height: 420px;
+        cursor: grab;
+        touch-action: none;
+      }
+
+      #mergeGraph:active {
+        cursor: grabbing;
+      }
+
+      .below-graph {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.7fr);
+        gap: 14px;
+        margin-top: 14px;
+      }
+
+      .subpanel {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--panel-raised);
+      }
+
+      .subpanel h2 {
+        padding: 13px 15px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.9rem;
+      }
+
+      .step-list {
+        max-height: 330px;
+        overflow: auto;
+        padding: 8px;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        padding: 9px;
+        border-radius: 8px;
+      }
+
+      .step:nth-child(odd) {
+        background: rgb(255 255 255 / 2%);
+      }
+
+      .step-number {
+        display: grid;
+        width: 26px;
+        height: 26px;
+        place-items: center;
+        border-radius: 7px;
+        background: var(--accent-dark);
+        color: var(--accent-bright);
+        font-size: 0.74rem;
+        font-weight: 700;
+      }
+
+      .step-copy {
+        min-width: 0;
+        font-size: 0.8rem;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+
+      .step-item-left {
+        color: var(--accent-bright);
+      }
+
+      .step-item-right {
+        color: #caa3ee;
+      }
+
+      .step-operator {
+        color: var(--muted);
+      }
+
+      .step-cost {
+        color: var(--cost);
+        font-size: 0.78rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      details summary {
+        padding: 13px 15px;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 0.85rem;
+        font-weight: 650;
+      }
+
+      #rawOutput {
+        max-height: 330px;
+        margin: 0;
+        overflow: auto;
+        padding: 0 15px 15px;
+        color: #bdc9c0;
+        font: 0.72rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+      }
+
+      .error {
+        margin: 18px;
+        padding: 14px 16px;
+        border: 1px solid #8e4343;
+        border-radius: 10px;
+        background: #3b2020;
+        color: #ffd5d5;
+        line-height: 1.5;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      @media (max-width: 1050px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .workspace--configuration-collapsed {
+          grid-template-columns: 1fr;
+        }
+
+        .configuration-panel--collapsed .panel-header {
+          justify-content: space-between;
+          padding-inline: 18px;
+        }
+
+        .configuration-panel--collapsed .panel-heading-copy {
+          display: block;
+        }
+
+        .configuration-toggle::before {
+          transform: rotate(-135deg);
+        }
+
+        .configuration-panel--collapsed .configuration-toggle::before {
+          transform: rotate(45deg);
+        }
+
+        #editor {
+          height: 480px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          padding: 16px;
+        }
+
+        .topbar {
+          align-items: flex-start;
+        }
+
+        .tagline {
+          display: none;
+        }
+
+        .summary-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .summary-grid .metric:last-child:nth-child(odd) {
+          grid-column: 1 / -1;
+        }
+
+        .below-graph {
+          grid-template-columns: 1fr;
+        }
+
+        .graph-toolbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .graph-heading-group {
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 440px) {
+        .editor-actions {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        #copyShareLink {
+          width: 100%;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div class="modal show" id="uploadModal" tabindex="-1">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title me-auto">Minecraft Anvil Calculator v1.0</h5>
-            <a
-              href="https://github.com/ViRb3/anvil-calc"
-              class="link-primary ms-auto"
-            >
-              GitHub
-            </a>
-          </div>
-          <div class="modal-body">
-            <div id="editor" style="height: 21rem; width: 100%"></div>
-          </div>
-          <div class="modal-footer">
-            <div
-              id="formFileSpinner"
-              class="spinner-border text-primary me-auto ms-auto"
-              role="status"
-              style="display: none"
-            ></div>
-            <button
-              id="submit"
-              type="submit"
-              class="btn btn-primary ms-auto me-auto"
-            >
-              Submit
-            </button>
-          </div>
-          <div class="modal-footer">
-            <div id="editor2" style="height: 21rem; width: 100%"></div>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-mark" src="./logo.webp" alt="" />
+          <div>
+            <h1>Minecraft Anvil Calculator</h1>
+            <p class="tagline">The fastest enchantment order calculator for modded Minecraft.</p>
           </div>
         </div>
-      </div>
-    </div>
-  </body>
+        <a
+          class="github-link"
+          href="https://github.com/ViRb3/anvil-calc"
+          rel="noreferrer"
+        >
+          View on GitHub ↗
+        </a>
+      </header>
 
-  <script type="module">
-    import init, { process_wasm } from "./anvil_calc.js";
-    var editor = ace.edit("editor");
-    var editor2 = ace.edit("editor2");
-    var spinner = document.getElementById("formFileSpinner");
-    var start = document.getElementById("submit");
-    editor.setOptions({
-      mode: "ace/mode/yaml",
-      tabSize: 2,
-      wrap: true,
-      showLineNumbers: false,
-      showPrintMargin: false,
-    });
-    editor.getSession().on("changeAnnotation", function () {
-      start.disabled = editor.getSession().getAnnotations().length > 0;
-    });
-    editor.setValue(
-      `config:
+      <div id="workspace" class="workspace">
+        <section
+          id="configurationPanel"
+          class="panel configuration-panel"
+          aria-labelledby="input-heading"
+        >
+          <header class="panel-header">
+            <div class="panel-heading-copy">
+              <h2 id="input-heading">Configuration</h2>
+              <span class="panel-kicker">YAML</span>
+            </div>
+            <button
+              id="configurationToggle"
+              class="configuration-toggle"
+              type="button"
+              aria-expanded="true"
+              aria-controls="configurationBody"
+              aria-label="Collapse YAML configuration"
+              title="Collapse YAML configuration"
+            ></button>
+          </header>
+          <div id="configurationBody" class="configuration-body">
+            <div id="editor" aria-label="Calculator configuration"></div>
+            <div class="editor-actions">
+              <button id="submit" type="button">
+                <span class="button-label">Calculate optimal order</span>
+                <span class="button-progress" hidden aria-hidden="true"></span>
+              </button>
+              <button id="copyShareLink" type="button">Copy share link</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel results" aria-live="polite" aria-busy="false">
+          <div id="emptyState" class="empty-state">
+            <div class="empty-icon" aria-hidden="true">◇</div>
+            <h2>Your merge tree will appear here</h2>
+            <p>
+              Adjust the item and enchanted books, then calculate to see every
+              anvil operation as a dependency graph.
+            </p>
+          </div>
+
+          <div id="resultContent" class="result-content" hidden>
+            <div id="summary" class="summary-grid"></div>
+
+            <section class="graph-card" aria-labelledby="graph-heading">
+              <header class="graph-toolbar">
+                <div class="graph-heading-group">
+                  <div>
+                    <h2 id="graph-heading">Merge tree</h2>
+                    <p>Drag to pan · scroll or pinch to zoom</p>
+                  </div>
+                  <div class="graph-controls" aria-label="Graph controls">
+                    <button
+                      id="zoomOut"
+                      class="graph-control"
+                      type="button"
+                      aria-label="Zoom out"
+                    >
+                      −
+                    </button>
+                    <button
+                      id="fitGraph"
+                      class="graph-control"
+                      type="button"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      id="zoomIn"
+                      class="graph-control"
+                      type="button"
+                      aria-label="Zoom in"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div class="legend" aria-label="Graph legend">
+                  <span><i style="background: #31abc1"></i>Anvil step</span>
+                  <span><i style="background: #596882"></i>Input piece</span>
+                  <span><i style="background: var(--node-name)"></i>Item name</span>
+                  <span><i style="background: var(--node-cost)"></i>Step cost</span>
+                  <span><i style="background: var(--node-detail)"></i>Input values</span>
+                </div>
+              </header>
+              <div
+                id="mergeGraph"
+                role="img"
+                aria-label="Interactive optimal anvil operation merge tree"
+              ></div>
+            </section>
+
+            <div class="below-graph">
+              <section class="subpanel" aria-labelledby="steps-heading">
+                <h2 id="steps-heading">Operation order</h2>
+                <div id="stepList" class="step-list"></div>
+              </section>
+
+              <details class="subpanel">
+                <summary>Raw calculation report</summary>
+                <pre id="rawOutput"></pre>
+              </details>
+            </div>
+          </div>
+
+          <div id="errorOutput" class="error" hidden></div>
+        </section>
+      </div>
+    </main>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/ace-builds@1.14.0/src-min-noconflict/ace.js"
+      integrity="sha256-qRIzXhpaoqhHNJ5S32SoUuH2kvPkiZrXnKqUTZSjN9A="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/ace-builds@1.14.0/src-min-noconflict/worker-yaml.js"
+      integrity="sha256-WEVJdz0KzxfL++nSNUvO7gPaX4nVjOhuUjX6NzXmoHI="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.34.0/dist/cytoscape.min.js"></script>
+
+    <script type="module">
+      const STEP_PATTERN =
+        /^(\d+)\.\s+\[(.*):\s*(\d+),(\d+)\]\s+\+\s+\[(.*):\s*(\d+),(\d+)\]\s+=\s+(\d+)\s+levels\s+\((\d+)\s+XP\)$/;
+      const GRAPH_NODE_WIDTH = 152;
+      const GRAPH_NODE_GAP = 28;
+      const GRAPH_LEVEL_HEIGHT = 118;
+      const pageStyles = getComputedStyle(document.documentElement);
+      const graphColor = (name) =>
+        pageStyles.getPropertyValue(name).trim();
+      const GRAPH_COLORS = {
+        heading: graphColor("--node-heading"),
+        name: graphColor("--node-name"),
+        cost: graphColor("--node-cost"),
+        detail: graphColor("--node-detail"),
+      };
+
+      const editor = ace.edit("editor");
+      const workspace = document.getElementById("workspace");
+      const configurationPanel = document.getElementById("configurationPanel");
+      const configurationBody = document.getElementById("configurationBody");
+      const configurationToggle = document.getElementById(
+        "configurationToggle",
+      );
+      const submit = document.getElementById("submit");
+      const copyShareLink = document.getElementById("copyShareLink");
+      const buttonLabel = submit.querySelector(".button-label");
+      const buttonProgress = submit.querySelector(".button-progress");
+      const results = document.querySelector(".results");
+      const emptyState = document.getElementById("emptyState");
+      const resultContent = document.getElementById("resultContent");
+      const errorOutput = document.getElementById("errorOutput");
+      const summary = document.getElementById("summary");
+      const mergeGraph = document.getElementById("mergeGraph");
+      const zoomOut = document.getElementById("zoomOut");
+      const fitGraph = document.getElementById("fitGraph");
+      const zoomIn = document.getElementById("zoomIn");
+      const stepList = document.getElementById("stepList");
+      const rawOutput = document.getElementById("rawOutput");
+      let graph = null;
+      let nextCalculationId = 0;
+      const pendingCalculations = new Map();
+      const calculatorWorker = new Worker("./calculator-worker.js", {
+        type: "module",
+      });
+
+      calculatorWorker.addEventListener("message", ({ data }) => {
+        const pending = pendingCalculations.get(data.id);
+        if (!pending) {
+          return;
+        }
+        pendingCalculations.delete(data.id);
+        if (data.error) {
+          pending.reject(new Error(data.error));
+        } else {
+          pending.resolve(data.result);
+        }
+      });
+
+      calculatorWorker.addEventListener("error", (event) => {
+        const error = new Error(
+          event.message || "The calculation worker stopped unexpectedly.",
+        );
+        for (const pending of pendingCalculations.values()) {
+          pending.reject(error);
+        }
+        pendingCalculations.clear();
+      });
+
+      function encodeSharedInput(input) {
+        const bytes = new TextEncoder().encode(input);
+        let binary = "";
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+          binary += String.fromCharCode(
+            ...bytes.subarray(offset, offset + 0x8000),
+          );
+        }
+        return btoa(binary)
+          .replaceAll("+", "-")
+          .replaceAll("/", "_")
+          .replace(/=+$/, "");
+      }
+
+      function decodeSharedInput() {
+        const encoded = window.location.hash.slice(1);
+        if (!encoded) {
+          return null;
+        }
+        try {
+          if (!/^[A-Za-z0-9_-]+$/.test(encoded)) {
+            throw new Error("URL fragment is not Base64URL");
+          }
+          const base64 = encoded
+            .replaceAll("-", "+")
+            .replaceAll("_", "/")
+            .padEnd(Math.ceil(encoded.length / 4) * 4, "=");
+          const binary = atob(base64);
+          const bytes = Uint8Array.from(binary, (character) =>
+            character.charCodeAt(0),
+          );
+          return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+        } catch (error) {
+          console.warn("Ignoring invalid shared configuration URL.", error);
+          return null;
+        }
+      }
+
+      function createShareUrl(input) {
+        const url = new URL(window.location.href);
+        url.hash = encodeSharedInput(input);
+        return url.toString();
+      }
+
+      async function copyText(text) {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.append(textArea);
+        textArea.select();
+        const copied = document.execCommand("copy");
+        textArea.remove();
+        if (!copied) {
+          throw new Error("Clipboard access is unavailable.");
+        }
+      }
+
+      const sharedInput = decodeSharedInput();
+
+      editor.setOptions({
+        mode: "ace/mode/yaml",
+        theme: "ace/theme/tomorrow_night_eighties",
+        tabSize: 2,
+        wrap: true,
+        showLineNumbers: false,
+        showPrintMargin: false,
+        fontSize: "13px",
+      });
+      editor.getSession().on("changeAnnotation", () => {
+        submit.disabled = editor.getSession().getAnnotations().length > 0;
+      });
+      editor.setValue(
+        sharedInput ?? `config:
   # Combining books is free when using Enchantment Library (Apotheosis)
   books_free: false
   # false: optimize for gathering all levels up front, e.g. 35->17->0
-  # true:  optimize for gathering the exact levels each step, e.g. 18->0->15->0
+  # true:  optimize for gathering the exact levels for each step, e.g. 18->0->15->0
   optimize_per_step: false
 input:
   # [name, level x multiplier, penalty]
@@ -91,61 +951,474 @@ input:
     - ["unbreaking", 3x1, 0]
     - ["mending", 1x2, 0]
 `,
-      1
-    );
-    editor2.setOptions({
-      mode: "ace/mode/javascript",
-      useWorker: false,
-      wrap: true,
-      showGutter: false,
-      showPrintMargin: false,
-    });
-    editor2.setReadOnly(true);
-    editor2.setValue("Click Submit to begin...\n", 1);
-    init().then(() => {
-      start.addEventListener("click", function () {
-        spinner.style.display = "inline-block";
-        start.style.display = "none";
-        editor2.setValue("Calculating...\n", 1);
-        setTimeout(() => {
-          try {
-            editor2.setValue(process_wasm(editor.getValue()), 1);
-            spinner.style.display = "none";
-            start.style.display = "inline-block";
-          } catch (err) {
-            editor2.setValue(
-              "Error occurred, was the input formatted correctly?\nCheck console logs for more information.\n",
-              1
+        1,
+      );
+      editor.clearSelection();
+
+      function calculate(input) {
+        return new Promise((resolve, reject) => {
+          const id = nextCalculationId++;
+          pendingCalculations.set(id, { resolve, reject });
+          calculatorWorker.postMessage({ id, input });
+        });
+      }
+
+      function setConfigurationCollapsed(collapsed) {
+        const wasCollapsed = configurationPanel.classList.contains(
+          "configuration-panel--collapsed",
+        );
+        if (wasCollapsed === collapsed) {
+          return;
+        }
+
+        configurationPanel.classList.toggle(
+          "configuration-panel--collapsed",
+          collapsed,
+        );
+        workspace.classList.toggle(
+          "workspace--configuration-collapsed",
+          collapsed,
+        );
+        configurationBody.setAttribute("aria-hidden", String(collapsed));
+        configurationToggle.setAttribute("aria-expanded", String(!collapsed));
+        const action = collapsed ? "Expand" : "Collapse";
+        configurationToggle.setAttribute(
+          "aria-label",
+          `${action} YAML configuration`,
+        );
+        configurationToggle.title = `${action} YAML configuration`;
+
+        requestAnimationFrame(() => {
+          editor.resize();
+          graph?.resize();
+          graph?.fit(graph.elements(), 42);
+        });
+      }
+
+      configurationToggle.addEventListener("click", () => {
+        setConfigurationCollapsed(
+          !configurationPanel.classList.contains(
+            "configuration-panel--collapsed",
+          ),
+        );
+      });
+
+      function parseReport(report) {
+        const steps = [];
+        const metrics = new Map();
+
+        for (const line of report.trim().split("\n")) {
+          const match = line.match(STEP_PATTERN);
+          if (match) {
+            steps.push({
+              number: Number(match[1]),
+              left: {
+                name: match[2],
+                value: Number(match[3]),
+                penalty: Number(match[4]),
+              },
+              right: {
+                name: match[5],
+                value: Number(match[6]),
+                penalty: Number(match[7]),
+              },
+              levels: Number(match[8]),
+              xp: Number(match[9]),
+            });
+            continue;
+          }
+
+          const separator = line.indexOf(":");
+          if (separator !== -1) {
+            metrics.set(
+              line.slice(0, separator).trim(),
+              line.slice(separator + 1).trim(),
             );
-            init().then(() => {
-              spinner.style.display = "none";
-              start.style.display = "inline-block";
+          }
+        }
+
+        return { steps, metrics };
+      }
+
+      function buildTree(steps) {
+        const available = new Map();
+        let leafId = 0;
+
+        function store(node) {
+          const candidates = available.get(node.name) ?? [];
+          candidates.push(node);
+          available.set(node.name, candidates);
+        }
+
+        function take(piece) {
+          const candidates = available.get(piece.name);
+          if (candidates?.length) {
+            return candidates.pop();
+          }
+          return {
+            id: `leaf-${leafId++}`,
+            type: "leaf",
+            ...piece,
+            children: [],
+          };
+        }
+
+        let root = null;
+        for (const step of steps) {
+          const left = take(step.left);
+          const right = take(step.right);
+          root = {
+            id: `step-${step.number}`,
+            type: "merge",
+            name: `${step.left.name} + ${step.right.name}`,
+            ...step,
+            children: [left, right],
+          };
+          store(root);
+        }
+        return root;
+      }
+
+      function truncate(value, length = 24) {
+        return value.length > length
+          ? `${value.slice(0, length - 1)}…`
+          : value;
+      }
+
+      function renderGraph(root) {
+        graph?.destroy();
+        graph = null;
+        if (!root) {
+          return;
+        }
+
+        function measure(node) {
+          if (!node.children.length) {
+            node.layoutWidth = GRAPH_NODE_WIDTH;
+            return node.layoutWidth;
+          }
+          node.layoutWidth = Math.max(
+            GRAPH_NODE_WIDTH,
+            node.children.reduce((width, child) => width + measure(child), 0) +
+              GRAPH_NODE_GAP * (node.children.length - 1),
+          );
+          return node.layoutWidth;
+        }
+
+        function position(node, left, depth) {
+          node.x = left + node.layoutWidth / 2;
+          node.y = -depth * GRAPH_LEVEL_HEIGHT;
+          let childLeft = left;
+          for (const child of node.children) {
+            position(child, childLeft, depth + 1);
+            childLeft += child.layoutWidth + GRAPH_NODE_GAP;
+          }
+        }
+
+        measure(root);
+        position(root, 0, 0);
+
+        const elements = [];
+        function addElements(node) {
+          const detail =
+            node.type === "merge"
+              ? `${node.levels} levels · ${node.xp.toLocaleString()} XP`
+              : `Value ${node.value} · Penalty ${node.penalty}`;
+          const heading =
+            node.type === "merge" ? `Step ${node.number}` : "Input piece";
+
+          elements.push({
+            data: {
+              id: node.id,
+              type: node.type,
+            },
+            position: { x: node.x, y: node.y },
+          });
+
+          [
+            ["heading", heading, -18],
+            ["name", truncate(node.name, 28), 0],
+            ["detail", detail, 18],
+          ].forEach(([role, label, yOffset]) => {
+            elements.push({
+              data: {
+                id: `${node.id}-${role}`,
+                type: "node-label",
+                nodeType: node.type,
+                role,
+                label,
+              },
+              position: { x: node.x, y: node.y + yOffset },
+            });
+          });
+
+          for (const child of node.children) {
+            addElements(child);
+            elements.push({
+              data: {
+                id: `${node.id}-${child.id}`,
+                source: child.id,
+                target: node.id,
+              },
             });
           }
-        }, 100);
-      });
-    });
-    const modalElem = document.getElementById("uploadModal");
-    const modal = new bootstrap.Modal(modalElem, {
-      backdrop: "static",
-      keyboard: false,
-    });
-    modal.show();
-  </script>
+        }
+        addElements(root);
 
-  <script
-    src="https://cdn.jsdelivr.net/npm/ace-builds@1.14.0/src-min-noconflict/ace.js"
-    integrity="sha256-qRIzXhpaoqhHNJ5S32SoUuH2kvPkiZrXnKqUTZSjN9A="
-    crossorigin="anonymous"
-  ></script>
-  <script
-    src="https://cdn.jsdelivr.net/npm/ace-builds@1.14.0/src-min-noconflict/worker-yaml.js"
-    integrity="sha256-WEVJdz0KzxfL++nSNUvO7gPaX4nJvOhuUjX6NzXmoHI="
-    crossorigin="anonymous"
-  ></script>
-  <script
-    src="https://cdn.jsdelivr.net/npm/ace-builds@1.14.0/src-min-noconflict/worker-javascript.js"
-    integrity="sha256-5nU9x96IP0tXXKB9SbLvLRhmW7tcyhJ/mP8i33uXOGo="
-    crossorigin="anonymous"
-  ></script>
+        graph = cytoscape({
+          container: mergeGraph,
+          elements,
+          minZoom: 0.25,
+          maxZoom: 3,
+          wheelSensitivity: 1,
+          boxSelectionEnabled: false,
+          autoungrabify: true,
+          autounselectify: true,
+          style: [
+            {
+              selector: "node",
+              style: {
+                width: 152,
+                height: 70,
+                shape: "round-rectangle",
+                "background-color": "#1b263b",
+                "border-color": "#596882",
+                "border-width": 1.5,
+                events: "no",
+                "text-events": "no",
+                "overlay-opacity": 0,
+              },
+            },
+            {
+              selector: 'node[type = "merge"]',
+              style: {
+                "background-color": "#102d43",
+                "border-color": "#31abc1",
+              },
+            },
+            {
+              selector: 'node[type = "node-label"]',
+              style: {
+                width: 1,
+                height: 1,
+                label: "data(label)",
+                color: "#f3f5ff",
+                "font-family": "Inter, ui-sans-serif, system-ui, sans-serif",
+                "font-size": 15,
+                "font-weight": 600,
+                "text-wrap": "ellipsis",
+                "text-max-width": 132,
+                "text-valign": "center",
+                "text-halign": "center",
+                "background-opacity": 0,
+                "border-width": 0,
+                "z-index": 10,
+              },
+            },
+            {
+              selector: 'node[type = "node-label"][role = "heading"]',
+              style: {
+                color: GRAPH_COLORS.heading,
+                "font-size": 15,
+                "font-weight": 700,
+              },
+            },
+            {
+              selector: 'node[type = "node-label"][role = "name"]',
+              style: {
+                color: GRAPH_COLORS.name,
+                "font-weight": 700,
+              },
+            },
+            {
+              selector:
+                'node[type = "node-label"][role = "detail"][nodeType = "merge"]',
+              style: {
+                color: GRAPH_COLORS.cost,
+              },
+            },
+            {
+              selector:
+                'node[type = "node-label"][role = "detail"][nodeType = "leaf"]',
+              style: {
+                color: GRAPH_COLORS.detail,
+              },
+            },
+            {
+              selector: "edge",
+              style: {
+                width: 2,
+                "line-color": "#4c6680",
+                "curve-style": "bezier",
+                "target-arrow-shape": "none",
+                events: "no",
+                "overlay-opacity": 0,
+              },
+            },
+          ],
+          layout: {
+            name: "preset",
+            fit: true,
+            padding: 42,
+          },
+        });
+
+      }
+
+      function renderMetrics(metrics) {
+        const objective = metrics.get("Optimized for");
+        const perStep = objective === "exact levels for each step";
+        const values = [
+          ["Optimized for", objective],
+          ["Total anvil cost", metrics.get("Total anvil cost")],
+          [
+            perStep
+              ? "XP · exact levels per step"
+              : "XP · all levels up front",
+            metrics.get(
+              perStep
+                ? "XP if exact levels for each step"
+                : "XP if all levels at once",
+            ),
+          ],
+        ];
+
+        summary.replaceChildren(
+          ...values.map(([label, value]) => {
+            const card = document.createElement("div");
+            card.className = "metric";
+            const labelElement = document.createElement("span");
+            labelElement.className = "metric-label";
+            labelElement.textContent = label;
+            const valueElement = document.createElement("strong");
+            valueElement.className = "metric-value";
+            valueElement.textContent = value ?? "—";
+            card.append(labelElement, valueElement);
+            return card;
+          }),
+        );
+      }
+
+      function renderSteps(steps) {
+        stepList.replaceChildren(
+          ...steps.map((step) => {
+            const row = document.createElement("div");
+            row.className = "step";
+
+            const number = document.createElement("span");
+            number.className = "step-number";
+            number.textContent = step.number;
+
+            const copy = document.createElement("span");
+            copy.className = "step-copy";
+
+            const leftItem = document.createElement("span");
+            leftItem.className = "step-item-left";
+            leftItem.textContent = step.left.name;
+
+            const operator = document.createElement("span");
+            operator.className = "step-operator";
+            operator.textContent = " + ";
+
+            const rightItem = document.createElement("span");
+            rightItem.className = "step-item-right";
+            rightItem.textContent = step.right.name;
+
+            copy.append(leftItem, operator, rightItem);
+
+            const cost = document.createElement("span");
+            cost.className = "step-cost";
+            cost.textContent = `${step.levels} lvl · ${step.xp.toLocaleString()} XP`;
+
+            row.append(number, copy, cost);
+            return row;
+          }),
+        );
+      }
+
+      function setBusy(isBusy) {
+        results.setAttribute("aria-busy", String(isBusy));
+        submit.disabled = isBusy;
+        submit.classList.toggle("is-calculating", isBusy);
+        buttonProgress.hidden = !isBusy;
+        buttonLabel.textContent = isBusy
+          ? "Calculating…"
+          : "Calculate optimal order";
+      }
+
+      function zoomGraph(factor) {
+        if (!graph) {
+          return;
+        }
+        const level = Math.min(3, Math.max(0.25, graph.zoom() * factor));
+        graph.zoom({
+          level,
+          renderedPosition: {
+            x: mergeGraph.clientWidth / 2,
+            y: mergeGraph.clientHeight / 2,
+          },
+        });
+      }
+
+      zoomOut.addEventListener("click", () => zoomGraph(0.8));
+      zoomIn.addEventListener("click", () => zoomGraph(1.25));
+      fitGraph.addEventListener("click", () => {
+        graph?.fit(graph.elements(), 42);
+      });
+      copyShareLink.addEventListener("click", async () => {
+        const originalLabel = "Copy share link";
+        copyShareLink.disabled = true;
+        try {
+          await copyText(createShareUrl(editor.getValue()));
+          copyShareLink.textContent = "Link copied!";
+          copyShareLink.classList.add("share-link-copied");
+        } catch (error) {
+          copyShareLink.textContent = "Could not copy";
+          console.error(error);
+        } finally {
+          window.setTimeout(() => {
+            copyShareLink.textContent = originalLabel;
+            copyShareLink.classList.remove("share-link-copied");
+            copyShareLink.disabled = false;
+          }, 1800);
+        }
+      });
+      submit.addEventListener("click", async () => {
+        setBusy(true);
+        errorOutput.hidden = true;
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+
+        try {
+          const report = await calculate(editor.getValue());
+          const parsed = parseReport(report);
+          if (!parsed.steps.length) {
+            throw new Error(report.trim() || "The calculation returned no operations.");
+          }
+
+          rawOutput.textContent = report;
+          emptyState.hidden = true;
+          resultContent.hidden = false;
+          renderMetrics(parsed.metrics);
+          renderSteps(parsed.steps);
+          renderGraph(buildTree(parsed.steps));
+        } catch (error) {
+          resultContent.hidden = true;
+          emptyState.hidden = true;
+          errorOutput.textContent =
+            error instanceof Error
+              ? error.message
+              : "The input could not be processed. Check the YAML and try again.";
+          errorOutput.hidden = false;
+          console.error(error);
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      if (sharedInput !== null) {
+        submit.click();
+      }
+
+    </script>
+  </body>
 </html>
