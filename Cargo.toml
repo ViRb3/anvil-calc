@@ -1,23 +1,28 @@
 [package]
 name = "anvil-calc"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition = "2024"
+rust-version = "1.85"
+description = "Optimal Minecraft anvil enchantment order calculator"
+repository = "https://github.com/ViRb3/anvil-calc"
+homepage = "https://virb3.github.io/anvil-calc/"
+readme = "README.md"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-itertools = "0.12.0"
-tinyvec = { version = "1.6.0", features = ["alloc"] }
-serde_yaml = "0.9.30"
-serde = { version = "1.0.195", features = ["derive"] }
-wasm-bindgen = "0.2.89"
+serde = { version = "1.0.229", features = ["derive"] }
+yaml_serde = "0.10.4"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.7"
-instant = { version = "0.1.12", features = [ "wasm-bindgen", "inaccurate" ] }
-lfu_cache = "1.3.0"
-lru = "0.12.1"
+wasm-bindgen = "0.2.126"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-O4"]
 
 [profile.release]
-lto = true
+lto = "fat"
+codegen-units = 1
+panic = "abort"

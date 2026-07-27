@@ -1,0 +1,30 @@
+config:
+  books_free: false
+  optimize_per_step: true
+input:
+  # The 4x1 and 2x2 books below have the same value, prior work, and type.
+  # Their multiplicity-two group disables the singleton bitset fast path.
+  # Every other piece remains mechanically unique, keeping the generic
+  # mixed-radix DP workload adversarial.
+  items:
+    - ["item", 0x0, 0]
+  books:
+    - ["book 01", 1x1, 0]
+    - ["book 02", 2x1, 0]
+    - ["book 03", 3x1, 0]
+    - ["book 04a", 4x1, 0]
+    - ["book 04b", 2x2, 0]
+    - ["book 05", 5x1, 0]
+    - ["book 06", 6x1, 0]
+    - ["book 07", 7x1, 0]
+    - ["book 08", 8x1, 0]
+    - ["book 09", 9x1, 0]
+    - ["book 10", 10x1, 0]
+    - ["book 11", 11x1, 0]
+    - ["book 12", 12x1, 0]
+    - ["book 13", 13x1, 0]
+    - ["book 14", 14x1, 0]
+    - ["book 15", 15x1, 0]
+    - ["book 16", 16x1, 0]
+    - ["book 17", 17x1, 0]
+    - ["book 18", 18x1, 0]

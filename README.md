@@ -1,6 +1,5 @@
 <p align="center">
     <img width="256" heigth="256" src="logo.png">
-    <h1 align="center">anvil-calc</h1>
     <p align="center">
         Optimal enchantment order calculator for modded Minecraft
     </p>
@@ -10,10 +9,10 @@
 ## Features
 
 - Minimalistic, text-based UI, optimized for fast typing
-- Up to 15 items/books
+- No fixed item/book limit; duplicate-heavy inputs scale especially well
 - Custom prior work penalty
 - User-defined enchantments
-- Optimize for XP rather than levels
+- Optimize for using all levels at once, or the exact levels for each step
 - Free books mode (Apotheosis)
 
 ## Usage
@@ -24,7 +23,7 @@ Just head over to https://virb3.github.io/anvil-calc/.
 
 #### Binary version
 
-You'll need to compile the program using Rust:
+Build the native command-line program with Rust:
 
 ```bash
 cargo build --release
@@ -40,9 +39,16 @@ Then, simply run it from `target/release/anvil-calc`. Make sure `config.yml` is 
 
 ## Technical details
 
-This tool is an extremely optimized bruteforcer written in Rust and compiled for WebAssembly. It is completely client-side and no server is required.
+The solver uses grouped multiset dynamic programming with sparse Pareto frontiers over prior-work counts. Mechanically interchangeable pieces share a mixed-radix count dimension instead of being treated as separately labelled subsets. It considers every relevant binary merge tree while discarding states that cannot improve either cost or resulting work count. Runtime therefore depends primarily on the number and multiplicity of distinct `(value, prior work, type)` groups rather than only the raw piece count.
 
-There are multiple heuristics in the code, which allows certain sub-optimal paths to be skipped. The most significant speedup is achieved by caching all input and output items, which allows not only repeated calculations to be avoided, but also sub-optimal ones to be completely skipped.
+The `optimize_per_step` setting selects between two different resource strategies:
+
+- `false` minimizes the sum of the level costs displayed by the anvil. Use this when earning all required levels before starting the sequence.
+- `true` minimizes raw XP points, assuming you earn exactly the required number of levels before each operation and spend down to level 0 each time.
+
+Minecraft's XP curve is nonlinear, so these strategies can produce different optimal orders. Results show both the XP required when all levels are funded up front and the sum required when every operation is funded separately.
+
+The same solver is available as a native binary and as a browser-native WebAssembly ES module. The web version is completely client-side and requires no server-side calculation.
 
 Reference: https://minecraft.fandom.com/wiki/Anvil_mechanics
 
