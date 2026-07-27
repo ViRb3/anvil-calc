@@ -705,19 +705,19 @@
                       −
                     </button>
                     <button
-                      id="fitGraph"
-                      class="graph-control"
-                      type="button"
-                    >
-                      Reset
-                    </button>
-                    <button
                       id="zoomIn"
                       class="graph-control"
                       type="button"
                       aria-label="Zoom in"
                     >
                       +
+                    </button>
+                    <button
+                      id="fitGraph"
+                      class="graph-control"
+                      type="button"
+                    >
+                      Reset
                     </button>
                   </div>
                 </div>
@@ -761,7 +761,7 @@
 
     <script type="module">
       const STEP_PATTERN =
-        /^(\d+)\.\s+\[(.*):\s*(\d+),(\d+)\]\s+\+\s+\[(.*):\s*(\d+),(\d+)\]\s+=\s+(\d+)\s+levels\s+\((\d+)\s+XP\)$/;
+        /^(\d+)\.\s+\[(.*):\s*(\d+),(\d+)\]\s+\+\s+\[(.*):\s*(\d+),(\d+)\]\s+=\s+(\d+)\s+lvl\s+\((\d+)\s+xp\)$/;
       const GRAPH_NODE_WIDTH = 152;
       const GRAPH_NODE_GAP = 28;
       const GRAPH_LEVEL_HEIGHT = 118;
@@ -1110,8 +1110,8 @@ input:
         function addElements(node) {
           const detail =
             node.type === "merge"
-              ? `${node.levels} levels · ${node.xp.toLocaleString()} XP`
-              : `Value ${node.value} · Penalty ${node.penalty}`;
+              ? `${node.levels} lvl · ${node.xp.toLocaleString()} xp`
+              : `value ${node.value} · pen ${node.penalty}`;
           const heading =
             node.type === "merge" ? `Step ${node.number}` : "Input piece";
 
@@ -1255,21 +1255,10 @@ input:
       }
 
       function renderMetrics(metrics) {
-        const objective = metrics.get("Optimized for");
-        const perStep = objective === "exact levels for each step";
         const values = [
-          ["Optimized for", objective],
-          ["Total anvil cost", metrics.get("Total anvil cost")],
-          [
-            perStep
-              ? "XP · exact levels per step"
-              : "XP · all levels up front",
-            metrics.get(
-              perStep
-                ? "XP if exact levels for each step"
-                : "XP if all levels at once",
-            ),
-          ],
+          ["Optimized for", metrics.get("Optimized for")],
+          ["Max step cost", metrics.get("Max step cost")],
+          ["Total cost", metrics.get("Total cost")],
         ];
 
         summary.replaceChildren(
@@ -1641,7 +1630,7 @@ input:
 
             const cost = document.createElement("span");
             cost.className = "step-cost";
-            cost.textContent = `${step.levels} lvl · ${step.xp.toLocaleString()} XP`;
+            cost.textContent = `${step.levels} lvl · ${step.xp.toLocaleString()} xp`;
 
             row.append(number, copy, cost);
             return row;
